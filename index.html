@@ -1,1 +1,347 @@
-PLACEHOLDER_WILL_REPLACE
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>롯데렌터카 카드 동의서</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    .signature-pad { border: 2px dashed #cbd5e1; border-radius: 12px; background: #fff; touch-action: none; }
+    .invalid { border-color: #ef4444 !important; background-color: #fef2f2; }
+    .valid { border-color: #22c55e !important; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="max-w-6xl mx-auto">
+    <header class="bg-red-600 text-white p-4 flex flex-wrap justify-between items-center gap-2">
+      <div>
+        <h1 class="text-lg font-bold">LOTTE rent-a-car · 김해공항</h1>
+        <p id="headerSub" class="text-xs opacity-90">카드 정보 수집 동의서</p>
+      </div>
+      <div class="flex gap-2 items-center">
+        <select id="langSelect" class="text-xs bg-white/20 text-white border-0 rounded px-2 py-1">
+          <option value="ko">한국어</option>
+          <option value="en">English</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="zh-TW">繁體中文</option>
+        </select>
+        <span id="modeLabel" class="text-xs bg-white/20 px-2 py-1 rounded">고객 모드</span>
+        <button id="btnAdmin" class="bg-white/20 px-4 py-2 rounded-lg text-sm font-medium">관리자</button>
+      </div>
+    </header>
+    <div id="formView" class="p-4 max-w-md mx-auto">
+      <div class="bg-white rounded-2xl p-5 space-y-4 shadow text-sm">
+        <div id="titleCard" class="text-center font-bold text-base border-b pb-2">Card Information</div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="text-gray-600">Company</div>
+          <div class="font-medium">Lotte Rental Co., Ltd.</div>
+        </div>
+        <input id="reservation" type="text" data-i18n-placeholder="reservation" class="w-full border rounded-lg px-4 py-3 text-base">
+        <input id="name" type="text" data-i18n-placeholder="name" class="w-full border rounded-lg px-4 py-3 text-base">
+        <input id="email" type="email" data-i18n-placeholder="email" class="w-full border rounded-lg px-4 py-3 text-base">
+        <input id="phone" type="tel" data-i18n-placeholder="phone" class="w-full border rounded-lg px-4 py-3 text-base">
+        <select id="cardType" class="w-full border rounded-lg px-4 py-3 text-base bg-white">
+          <option value="" data-i18n="typePlaceholder">Type (Debit / Credit)</option>
+          <option>Debit</option>
+          <option>Credit</option>
+        </select>
+        <input id="issuer" type="text" data-i18n-placeholder="issuer" class="w-full border rounded-lg px-4 py-3 text-base">
+        <div class="relative">
+          <input id="cardNumber" type="text" data-i18n-placeholder="cardNumber" class="w-full border rounded-lg px-4 py-3 pr-20 text-base" maxlength="19">
+          <button id="scanBtn" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white text-xs px-3 py-1.5 rounded" data-i18n="scan">스캔</button>
+        </div>
+        <p id="cardMsg" class="text-xs hidden"></p>
+        <input id="expiry" type="text" data-i18n-placeholder="expiry" class="w-full border rounded-lg px-4 py-3 text-base" maxlength="5">
+        <p id="expiryMsg" class="text-xs hidden"></p>
+        <p id="noteText" class="text-xs text-gray-500"></p>
+        <div class="bg-gray-50 p-3 rounded-lg text-xs text-gray-700 space-y-1">
+          <p class="font-bold" id="retentionTitle"></p>
+          <p id="retentionText"></p>
+        </div>
+        <label class="flex items-start gap-2 text-xs">
+          <input type="checkbox" id="agree" class="mt-1" required>
+          <span id="agreeText"></span>
+        </label>
+        <div>
+          <p id="signLabel" class="text-sm text-gray-600 mb-1">Signature *</p>
+          <canvas id="signature" class="signature-pad w-full h-40"></canvas>
+          <div class="flex justify-between items-center mt-1">
+            <button type="button" id="clearSign" class="text-sm text-red-600" data-i18n="clear">지우기</button>
+            <span class="text-xs text-gray-500">Date: <span id="signDate"></span></span>
+          </div>
+        </div>
+        <button id="submitBtn" class="w-full bg-red-600 text-white py-4 rounded-xl font-bold text-lg mt-2" data-i18n="submit">제출</button>
+      </div>
+    </div>
+    <div id="listView" class="hidden p-4">
+      <div class="bg-white rounded-2xl shadow overflow-hidden">
+        <div class="p-4 flex flex-wrap justify-between items-center gap-2 border-b">
+          <h2 class="font-bold">저장된 동의서 (관리자)</h2>
+          <div class="flex gap-2">
+            <button id="shareBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">공유하기</button>
+            <button id="downloadBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm">CSV 다운로드</button>
+            <button id="clearAllBtn" class="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm">전체 삭제</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-left">
+              <tr>
+                <th class="p-3">시간</th>
+                <th class="p-3">고객명</th>
+                <th class="p-3">예약번호</th>
+                <th class="p-3">연락처</th>
+                <th class="p-3">카드번호</th>
+                <th class="p-3">만료일</th>
+                <th class="p-3">서명</th>
+              </tr>
+            </thead>
+            <tbody id="listBody"></tbody>
+          </table>
+        </div>
+        <p id="empty" class="p-10 text-center text-gray-500 hidden">저장된 데이터가 없습니다.</p>
+      </div>
+    </div>
+  </div>
+  <div id="modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl p-4 w-full max-w-sm">
+      <video id="video" class="w-full rounded-lg" autoplay playsinline></video>
+      <canvas id="camCanvas" class="hidden"></canvas>
+      <div class="flex gap-2 mt-3">
+        <button id="capture" class="flex-1 bg-blue-600 text-white py-3 rounded-lg">촬영</button>
+        <button id="closeModal" class="flex-1 bg-gray-200 py-3 rounded-lg">닫기</button>
+      </div>
+      <p id="ocrStatus" class="text-center text-sm mt-2"></p>
+    </div>
+  </div>
+  <script>
+    const i18n = {
+      ko: { headerSub: "카드 정보 수집 동의서", reservation: "예약번호", name: "고객명 *", email: "이메일", phone: "연락처", typePlaceholder: "카드 종류", issuer: "카드사", cardNumber: "카드번호", scan: "스캔", expiry: "만료일 MM/YY", noteText: "* 렌터/운전자 본인 명의의 카드만 등록 가능합니다.", retentionTitle: "보관 기간", retentionText: "수집된 개인정보는 차량 반납 후 90일간 보관되며, 이후 안전하게 파기됩니다.", agreeText: "롯데렌탈㈜의 개인정보 수집 및 이용에 관한 내용을 읽고 이해하였으며, 자유롭게 동의합니다.", signLabel: "서명 *", clear: "지우기", submit: "제출", modeCustomer: "고객 모드", modeAdmin: "관리자 모드", admin: "관리자", customerMode: "고객모드", cardInvalid: "카드번호 형식이 올바르지 않습니다", cardValid: "카드번호 형식 확인됨", expiryInvalid: "만료일이 지났거나 형식이 잘못되었습니다", expiryValid: "만료일 확인됨" },
+      en: { headerSub: "Consent to the Collection and Use of Credit / Debit Card Information", reservation: "Reservation No.", name: "Renter's Name *", email: "Contact (e-mail)", phone: "Contact No.", typePlaceholder: "Type", issuer: "Card Issuer", cardNumber: "Card Number", scan: "Scan", expiry: "Expiration Date (MM/YY)", noteText: "* Only the payment card owned by the renter/driver shall be eligible for registration.", retentionTitle: "Period of Retention", retentionText: "The collected personal information will be retained for 90 days following the return of the rental vehicle, then securely destroyed.", agreeText: "I acknowledge that I have read and understood the information regarding the collection and use of my personal information by Lotte Rental Co., Ltd. and provide my consent freely.", signLabel: "Signature *", clear: "Clear", submit: "Submit", modeCustomer: "Customer Mode", modeAdmin: "Admin Mode", admin: "Admin", customerMode: "Customer", cardInvalid: "Invalid card number format", cardValid: "Card number format OK", expiryInvalid: "Expired or invalid date", expiryValid: "Expiry date OK" },
+      "zh-CN": { headerSub: "信用卡/借记卡信息收集与使用同意书", reservation: "预订编号", name: "租车人姓名 *", email: "联系邮箱", phone: "联系电话", typePlaceholder: "卡片类型", issuer: "发卡机构", cardNumber: "卡号", scan: "扫描", expiry: "有效期 (MM/YY)", noteText: "* 仅限租车人/驾驶人本人名下的支付卡可登记。", retentionTitle: "保存期限", retentionText: "收集的个人信息将在车辆归还后保存90天，之后将被安全销毁。", agreeText: "本人已阅读并理解乐天租赁有限公司关于个人信息收集与使用的内容，并自愿同意。", signLabel: "签名 *", clear: "清除", submit: "提交", modeCustomer: "客户模式", modeAdmin: "管理员模式", admin: "管理员", customerMode: "客户模式", cardInvalid: "卡号格式不正确", cardValid: "卡号格式正确", expiryInvalid: "有效期已过或格式错误", expiryValid: "有效期确认" },
+      "zh-TW": { headerSub: "信用卡/簽帳卡資訊蒐集與使用同意書", reservation: "預訂編號", name: "租車人姓名 *", email: "聯絡信箱", phone: "聯絡電話", typePlaceholder: "卡片類型", issuer: "發卡機構", cardNumber: "卡號", scan: "掃描", expiry: "有效期限 (MM/YY)", noteText: "* 僅限租車人/駕駛人本人名下之支付卡可登錄。", retentionTitle: "保存期限", retentionText: "蒐集之個人資料將於車輛歸還後保存90天，之後將被安全銷毀。", agreeText: "本人已閱讀並理解樂天租賃有限公司關於個人資料蒐集與使用之內容，並自願同意。", signLabel: "簽名 *", clear: "清除", submit: "提交", modeCustomer: "客戶模式", modeAdmin: "管理員模式", admin: "管理員", customerMode: "客戶模式", cardInvalid: "卡號格式不正確", cardValid: "卡號格式正確", expiryInvalid: "有效期限已過或格式錯誤", expiryValid: "有效期限確認" }
+    };
+    let currentLang = localStorage.getItem('lang') || 'ko';
+    function applyLang(lang) {
+      currentLang = lang;
+      localStorage.setItem('lang', lang);
+      const t = i18n[lang];
+      document.getElementById('headerSub').textContent = t.headerSub;
+      document.getElementById('titleCard').textContent = lang === 'ko' ? '카드 정보' : 'Card Information';
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t[el.dataset.i18nPlaceholder] || ''; });
+      document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t[el.dataset.i18n] || ''; });
+      document.getElementById('noteText').textContent = t.noteText;
+      document.getElementById('retentionTitle').textContent = t.retentionTitle;
+      document.getElementById('retentionText').textContent = t.retentionText;
+      document.getElementById('agreeText').textContent = t.agreeText;
+      document.getElementById('signLabel').textContent = t.signLabel;
+      document.getElementById('langSelect').value = lang;
+    }
+    document.getElementById('langSelect').onchange = (e) => applyLang(e.target.value);
+    applyLang(currentLang);
+    function luhnCheck(num) {
+      const digits = num.replace(/\D/g, '');
+      if (digits.length < 13 || digits.length > 19) return false;
+      let sum = 0; let isEven = false;
+      for (let i = digits.length - 1; i >= 0; i--) {
+        let d = parseInt(digits[i], 10);
+        if (isEven) { d *= 2; if (d > 9) d -= 9; }
+        sum += d; isEven = !isEven;
+      }
+      return sum % 10 === 0;
+    }
+    function checkExpiry(val) {
+      const m = val.match(/^(0[1-9]|1[0-2])\/(\d{2})$/);
+      if (!m) return false;
+      const month = parseInt(m[1], 10);
+      let year = parseInt(m[2], 10);
+      year += year < 50 ? 2000 : 1900;
+      const now = new Date();
+      const exp = new Date(year, month, 0);
+      return exp >= new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    const cardInput = document.getElementById('cardNumber');
+    const expiryInput = document.getElementById('expiry');
+    const cardMsg = document.getElementById('cardMsg');
+    const expiryMsg = document.getElementById('expiryMsg');
+    cardInput.addEventListener('input', () => {
+      const raw = cardInput.value.replace(/\D/g, '');
+      cardInput.value = raw.replace(/(.{4})/g, '$1 ').trim();
+      const t = i18n[currentLang];
+      if (raw.length >= 13) {
+        if (luhnCheck(raw)) {
+          cardInput.classList.remove('invalid');
+          cardInput.classList.add('valid');
+          cardMsg.textContent = t.cardValid;
+          cardMsg.className = 'text-xs text-green-600';
+        } else {
+          cardInput.classList.remove('valid');
+          cardInput.classList.add('invalid');
+          cardMsg.textContent = t.cardInvalid;
+          cardMsg.className = 'text-xs text-red-600';
+        }
+        cardMsg.classList.remove('hidden');
+      } else {
+        cardInput.classList.remove('valid', 'invalid');
+        cardMsg.classList.add('hidden');
+      }
+    });
+    expiryInput.addEventListener('input', () => {
+      let v = expiryInput.value.replace(/\D/g, '').slice(0, 4);
+      if (v.length >= 2) v = v.slice(0,2) + '/' + v.slice(2,4);
+      expiryInput.value = v;
+      const t = i18n[currentLang];
+      if (v.length === 5) {
+        if (checkExpiry(v)) {
+          expiryInput.classList.remove('invalid');
+          expiryInput.classList.add('valid');
+          expiryMsg.textContent = t.expiryValid;
+          expiryMsg.className = 'text-xs text-green-600';
+        } else {
+          expiryInput.classList.remove('valid');
+          expiryInput.classList.add('invalid');
+          expiryMsg.textContent = t.expiryInvalid;
+          expiryMsg.className = 'text-xs text-red-600';
+        }
+        expiryMsg.classList.remove('hidden');
+      } else {
+        expiryInput.classList.remove('valid', 'invalid');
+        expiryMsg.classList.add('hidden');
+      }
+    });
+    const STORAGE_KEY = 'lotte_card_consents';
+    const ADMIN_PIN = '123456';
+    let isAdmin = false;
+    document.getElementById('signDate').textContent = new Date().toLocaleDateString('en-CA');
+    const canvas = document.getElementById('signature');
+    const pad = new SignaturePad(canvas, { backgroundColor: '#ffffff' });
+    function resize() {
+      const r = Math.max(window.devicePixelRatio || 1, 1);
+      canvas.width = canvas.offsetWidth * r;
+      canvas.height = canvas.offsetHeight * r;
+      canvas.getContext('2d').scale(r, r);
+      pad.clear();
+    }
+    window.addEventListener('resize', resize);
+    setTimeout(resize, 150);
+    document.getElementById('clearSign').onclick = () => pad.clear();
+    document.getElementById('btnAdmin').onclick = () => {
+      const t = i18n[currentLang];
+      if (isAdmin) {
+        isAdmin = false;
+        document.getElementById('formView').classList.remove('hidden');
+        document.getElementById('listView').classList.add('hidden');
+        document.getElementById('modeLabel').textContent = t.modeCustomer;
+        document.getElementById('btnAdmin').textContent = t.admin;
+        return;
+      }
+      const pin = prompt(currentLang === 'ko' ? '관리자 비밀번호를 입력하세요' : 'Enter admin password');
+      if (pin === ADMIN_PIN) {
+        isAdmin = true;
+        document.getElementById('formView').classList.add('hidden');
+        document.getElementById('listView').classList.remove('hidden');
+        document.getElementById('modeLabel').textContent = t.modeAdmin;
+        document.getElementById('btnAdmin').textContent = t.customerMode;
+        loadList();
+      } else if (pin !== null) alert(currentLang === 'ko' ? '비밀번호가 틀렸습니다' : 'Incorrect password');
+    };
+    let stream;
+    document.getElementById('scanBtn').onclick = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        document.getElementById('video').srcObject = stream;
+        document.getElementById('modal').classList.remove('hidden');
+      } catch { alert('카메라 권한을 허용해 주세요'); }
+    };
+    document.getElementById('closeModal').onclick = () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      document.getElementById('modal').classList.add('hidden');
+    };
+    document.getElementById('capture').onclick = async () => {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('camCanvas');
+      const status = document.getElementById('ocrStatus');
+      status.textContent = '인식 중...';
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      try {
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+        const num = (text.match(/(?:\d[ -]*){13,19}/) || [''])[0].replace(/\D/g, '');
+        const exp = text.match(/(0[1-9]|1[0-2])\s*[\/\-]\s*(\d{2,4})/);
+        if (num.length >= 13) {
+          cardInput.value = num;
+          cardInput.dispatchEvent(new Event('input'));
+        }
+        if (exp) {
+          const yy = exp[2].length === 4 ? exp[2].slice(-2) : exp[2];
+          expiryInput.value = exp[1] + '/' + yy;
+          expiryInput.dispatchEvent(new Event('input'));
+        }
+        status.textContent = '완료';
+        setTimeout(() => document.getElementById('closeModal').click(), 700);
+      } catch { status.textContent = '실패'; }
+    };
+    function getData() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; } }
+    function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+    function makeCSV() {
+      const data = getData();
+      if (!data.length) return null;
+      const headers = ['시간','고객명','예약번호','연락처','이메일','카드번호','만료일','카드사','카드종류','언어'];
+      const rows = data.map(i => [new Date(i.timestamp).toLocaleString('ko-KR'), i.renterName || '', i.reservationNo || '', i.contactNo || '', i.email || '', i.cardNumber || '', i.expirationDate || '', i.cardIssuer || '', i.cardType || '', i.lang || '']);
+      return [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    }
+    document.getElementById('submitBtn').onclick = () => {
+      const t = i18n[currentLang];
+      const name = document.getElementById('name').value.trim();
+      const cardRaw = cardInput.value.replace(/\D/g, '');
+      if (!name) return alert(currentLang === 'ko' ? '고객명을 입력해 주세요' : 'Please enter name');
+      if (cardRaw && !luhnCheck(cardRaw)) return alert(t.cardInvalid);
+      if (expiryInput.value && !checkExpiry(expiryInput.value)) return alert(t.expiryInvalid);
+      if (pad.isEmpty()) return alert(currentLang === 'ko' ? '서명을 해 주세요' : 'Please sign');
+      if (!document.getElementById('agree').checked) return alert(currentLang === 'ko' ? '동의 체크를 해 주세요' : 'Please check consent');
+      const item = { timestamp: new Date().toISOString(), renterName: name, reservationNo: document.getElementById('reservation').value, contactNo: document.getElementById('phone').value, email: document.getElementById('email').value, cardNumber: cardRaw, expirationDate: expiryInput.value, cardIssuer: document.getElementById('issuer').value, cardType: document.getElementById('cardType').value, signature: pad.toDataURL(), lang: currentLang };
+      const data = getData(); data.unshift(item); saveData(data);
+      alert(currentLang === 'ko' ? '저장되었습니다' : 'Saved');
+      document.querySelectorAll('#formView input, #formView select').forEach(el => { if (el.type !== 'checkbox') el.value = ''; else el.checked = false; });
+      cardInput.classList.remove('valid', 'invalid');
+      expiryInput.classList.remove('valid', 'invalid');
+      cardMsg.classList.add('hidden');
+      expiryMsg.classList.add('hidden');
+      pad.clear();
+    };
+    function loadList() {
+      const data = getData();
+      const tbody = document.getElementById('listBody');
+      const empty = document.getElementById('empty');
+      if (!data.length) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      tbody.innerHTML = data.map(item => `<tr class="border-t hover:bg-gray-50"><td class="p-3 whitespace-nowrap">${new Date(item.timestamp).toLocaleString('ko-KR')}</td><td class="p-3">${item.renterName || '-'}</td><td class="p-3">${item.reservationNo || '-'}</td><td class="p-3">${item.contactNo || '-'}</td><td class="p-3 font-mono text-xs">${item.cardNumber || '-'}</td><td class="p-3">${item.expirationDate || '-'}</td><td class="p-3">${item.signature ? `<img src="${item.signature}" class="h-10 border rounded">` : '-'}</td></tr>`).join('');
+    }
+    document.getElementById('downloadBtn').onclick = () => {
+      const csv = makeCSV();
+      if (!csv) return alert('데이터가 없습니다');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
+      a.download = `카드동의서_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    };
+    document.getElementById('shareBtn').onclick = async () => {
+      const csv = makeCSV();
+      if (!csv) return alert('데이터가 없습니다');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const file = new File([blob], `카드동의서_${new Date().toISOString().slice(0,10)}.csv`, { type: 'text/csv' });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ title: '카드 동의서', files: [file] }); }
+        catch (err) { if (err.name !== 'AbortError') alert('공유에 실패했습니다'); }
+      } else document.getElementById('downloadBtn').click();
+    };
+    document.getElementById('clearAllBtn').onclick = () => {
+      if (confirm('저장된 모든 데이터를 삭제하시겠습니까?')) { localStorage.removeItem(STORAGE_KEY); loadList(); }
+    };
+  </script>
+</body>
+</html>
