@@ -21,7 +21,7 @@
       </div>
       <div class="flex gap-2">
         <button id="btnForm" class="bg-white text-red-600 px-4 py-2 rounded-lg text-sm font-medium">작성</button>
-        <button id="btnList" class="bg-white/20 px-4 py-2 rounded-lg text-sm font-medium">목록·다운로드</button>
+        <button id="btnList" class="bg-white/20 px-4 py-2 rounded-lg text-sm font-medium">목록·공유</button>
       </div>
     </header>
 
@@ -55,9 +55,10 @@
     <!-- List -->
     <div id="listView" class="hidden p-4">
       <div class="bg-white rounded-2xl shadow overflow-hidden">
-        <div class="p-4 flex justify-between items-center border-b">
+        <div class="p-4 flex flex-wrap justify-between items-center gap-2 border-b">
           <h2 class="font-bold">저장된 동의서</h2>
           <div class="flex gap-2">
+            <button id="shareBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">공유하기</button>
             <button id="downloadBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm">CSV 다운로드</button>
             <button id="clearAllBtn" class="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm">전체 삭제</button>
           </div>
@@ -162,6 +163,18 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
 
+    function makeCSV() {
+      const data = getData();
+      if (!data.length) return null;
+      const headers = ['시간','고객명','예약번호','연락처','이메일','카드번호','만료일','카드사','카드종류'];
+      const rows = data.map(i => [
+        new Date(i.timestamp).toLocaleString('ko-KR'),
+        i.renterName || '', i.reservationNo || '', i.contactNo || '', i.email || '',
+        i.cardNumber || '', i.expirationDate || '', i.cardIssuer || '', i.cardType || ''
+      ]);
+      return [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    }
+
     document.getElementById('submitBtn').onclick = () => {
       const name = document.getElementById('name').value.trim();
       if (!name) return alert('고객명을 입력해 주세요');
@@ -212,19 +225,36 @@
     }
 
     document.getElementById('downloadBtn').onclick = () => {
-      const data = getData();
-      if (!data.length) return alert('데이터가 없습니다');
-      const headers = ['시간','고객명','예약번호','연락처','이메일','카드번호','만료일','카드사','카드종류'];
-      const rows = data.map(i => [
-        new Date(i.timestamp).toLocaleString('ko-KR'),
-        i.renterName || '', i.reservationNo || '', i.contactNo || '', i.email || '',
-        i.cardNumber || '', i.expirationDate || '', i.cardIssuer || '', i.cardType || ''
-      ]);
-      const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const csv = makeCSV();
+      if (!csv) return alert('데이터가 없습니다');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
       a.download = `카드동의서_${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
+    };
+
+    document.getElementById('shareBtn').onclick = async () => {
+      const csv = makeCSV();
+      if (!csv) return alert('데이터가 없습니다');
+
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const file = new File([blob], `카드동의서_${new Date().toISOString().slice(0,10)}.csv`, { type: 'text/csv' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: '카드 동의서',
+            text: '롯데렌터카 김해공항 카드 동의서 데이터',
+            files: [file]
+          });
+        } catch (err) {
+          if (err.name !== 'AbortError') alert('공유에 실패했습니다');
+        }
+      } else {
+        // Fallback: download
+        document.getElementById('downloadBtn').click();
+        alert('이 기기는 공유 기능을 지원하지 않습니다. CSV 파일을 다운로드했습니다.');
+      }
     };
 
     document.getElementById('clearAllBtn').onclick = () => {
@@ -234,7 +264,6 @@
       }
     };
 
-    // Load list if already on that tab (for refresh)
     if (!document.getElementById('listView').classList.contains('hidden')) loadList();
   </script>
 </body>
