@@ -19,13 +19,13 @@
         <h1 class="text-lg font-bold">LOTTE rent-a-car · 김해공항</h1>
         <p class="text-xs opacity-90">카드 정보 수집 동의서</p>
       </div>
-      <div class="flex gap-2">
-        <button id="btnForm" class="bg-white text-red-600 px-4 py-2 rounded-lg text-sm font-medium">작성</button>
-        <button id="btnList" class="bg-white/20 px-4 py-2 rounded-lg text-sm font-medium">목록·공유</button>
+      <div class="flex gap-2 items-center">
+        <span id="modeLabel" class="text-xs bg-white/20 px-2 py-1 rounded">고객 모드</span>
+        <button id="btnAdmin" class="bg-white/20 px-4 py-2 rounded-lg text-sm font-medium">관리자</button>
       </div>
     </header>
 
-    <!-- Form -->
+    <!-- Customer Form -->
     <div id="formView" class="p-4 max-w-md mx-auto">
       <div class="bg-white rounded-2xl p-5 space-y-3 shadow">
         <input id="name" type="text" placeholder="고객명 *" class="w-full border rounded-lg px-4 py-3 text-base">
@@ -52,11 +52,11 @@
       </div>
     </div>
 
-    <!-- List -->
+    <!-- Admin List (hidden by default) -->
     <div id="listView" class="hidden p-4">
       <div class="bg-white rounded-2xl shadow overflow-hidden">
         <div class="p-4 flex flex-wrap justify-between items-center gap-2 border-b">
-          <h2 class="font-bold">저장된 동의서</h2>
+          <h2 class="font-bold">저장된 동의서 (관리자)</h2>
           <div class="flex gap-2">
             <button id="shareBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">공유하기</button>
             <button id="downloadBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm">CSV 다운로드</button>
@@ -99,6 +99,8 @@
 
   <script>
     const STORAGE_KEY = 'lotte_card_consents';
+    const ADMIN_PIN = '1234'; // 관리자 비밀번호 (원하시는 번호로 바꾸세요)
+    let isAdmin = false;
 
     const canvas = document.getElementById('signature');
     const pad = new SignaturePad(canvas, { backgroundColor: '#ffffff' });
@@ -113,14 +115,27 @@
     setTimeout(resize, 150);
     document.getElementById('clearSign').onclick = () => pad.clear();
 
-    document.getElementById('btnForm').onclick = () => {
-      document.getElementById('formView').classList.remove('hidden');
-      document.getElementById('listView').classList.add('hidden');
-    };
-    document.getElementById('btnList').onclick = () => {
-      document.getElementById('formView').classList.add('hidden');
-      document.getElementById('listView').classList.remove('hidden');
-      loadList();
+    // Admin toggle
+    document.getElementById('btnAdmin').onclick = () => {
+      if (isAdmin) {
+        isAdmin = false;
+        document.getElementById('formView').classList.remove('hidden');
+        document.getElementById('listView').classList.add('hidden');
+        document.getElementById('modeLabel').textContent = '고객 모드';
+        document.getElementById('btnAdmin').textContent = '관리자';
+        return;
+      }
+      const pin = prompt('관리자 비밀번호를 입력하세요');
+      if (pin === ADMIN_PIN) {
+        isAdmin = true;
+        document.getElementById('formView').classList.add('hidden');
+        document.getElementById('listView').classList.remove('hidden');
+        document.getElementById('modeLabel').textContent = '관리자 모드';
+        document.getElementById('btnAdmin').textContent = '고객모드';
+        loadList();
+      } else if (pin !== null) {
+        alert('비밀번호가 틀렸습니다');
+      }
     };
 
     let stream;
@@ -251,7 +266,6 @@
           if (err.name !== 'AbortError') alert('공유에 실패했습니다');
         }
       } else {
-        // Fallback: download
         document.getElementById('downloadBtn').click();
         alert('이 기기는 공유 기능을 지원하지 않습니다. CSV 파일을 다운로드했습니다.');
       }
@@ -263,8 +277,6 @@
         loadList();
       }
     };
-
-    if (!document.getElementById('listView').classList.contains('hidden')) loadList();
   </script>
 </body>
 </html>
