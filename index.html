@@ -17,7 +17,7 @@
     <header class="bg-red-600 text-white p-4 flex flex-wrap justify-between items-center gap-2">
       <div>
         <h1 class="text-lg font-bold">LOTTE rent-a-car · 김해공항</h1>
-        <p class="text-xs opacity-90">카드 정보 수집 동의서</p>
+        <p class="text-xs opacity-90">Consent to the Collection and Use of Credit / Debit Card Information</p>
       </div>
       <div class="flex gap-2 items-center">
         <span id="modeLabel" class="text-xs bg-white/20 px-2 py-1 rounded">고객 모드</span>
@@ -25,34 +25,49 @@
       </div>
     </header>
 
-    <!-- Customer Form -->
     <div id="formView" class="p-4 max-w-md mx-auto">
-      <div class="bg-white rounded-2xl p-5 space-y-3 shadow">
-        <input id="name" type="text" placeholder="고객명 *" class="w-full border rounded-lg px-4 py-3 text-base">
-        <input id="reservation" type="text" placeholder="예약번호" class="w-full border rounded-lg px-4 py-3 text-base">
-        <input id="phone" type="tel" placeholder="연락처" class="w-full border rounded-lg px-4 py-3 text-base">
-        <input id="email" type="email" placeholder="이메일" class="w-full border rounded-lg px-4 py-3 text-base">
+      <div class="bg-white rounded-2xl p-5 space-y-4 shadow text-sm">
+        <div class="text-center font-bold text-base border-b pb-2">Card Information</div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="text-gray-600">Company</div>
+          <div class="font-medium">Lotte Rental Co., Ltd.</div>
+        </div>
+        <input id="reservation" type="text" placeholder="Reservation No." class="w-full border rounded-lg px-4 py-3 text-base">
+        <input id="name" type="text" placeholder="Renter's Name *" class="w-full border rounded-lg px-4 py-3 text-base">
+        <input id="email" type="email" placeholder="Contact (e-mail)" class="w-full border rounded-lg px-4 py-3 text-base">
+        <input id="phone" type="tel" placeholder="Contact No." class="w-full border rounded-lg px-4 py-3 text-base">
+        <select id="cardType" class="w-full border rounded-lg px-4 py-3 text-base bg-white">
+          <option value="">Type (Debit / Credit)</option>
+          <option>Debit</option>
+          <option>Credit</option>
+        </select>
+        <input id="issuer" type="text" placeholder="Card Issuer" class="w-full border rounded-lg px-4 py-3 text-base">
         <div class="relative">
-          <input id="cardNumber" type="text" placeholder="카드번호" class="w-full border rounded-lg px-4 py-3 pr-20 text-base">
+          <input id="cardNumber" type="text" placeholder="Card Number" class="w-full border rounded-lg px-4 py-3 pr-20 text-base">
           <button id="scanBtn" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white text-xs px-3 py-1.5 rounded">스캔</button>
         </div>
-        <input id="expiry" type="text" placeholder="만료일 MM/YYYY" class="w-full border rounded-lg px-4 py-3 text-base">
-        <input id="issuer" type="text" placeholder="카드사" class="w-full border rounded-lg px-4 py-3 text-base">
-        <select id="cardType" class="w-full border rounded-lg px-4 py-3 text-base bg-white">
-          <option value="">카드 종류</option>
-          <option>Credit</option>
-          <option>Debit</option>
-        </select>
-        <div>
-          <p class="text-sm text-gray-600 mb-1">서명 *</p>
-          <canvas id="signature" class="signature-pad w-full h-40"></canvas>
-          <button type="button" id="clearSign" class="text-sm text-red-600 mt-1">지우기</button>
+        <input id="expiry" type="text" placeholder="Expiration Date (MM/YYYY)" class="w-full border rounded-lg px-4 py-3 text-base">
+        <p class="text-xs text-gray-500">* Only the payment card owned by the renter/driver shall be eligible for registration.</p>
+        <div class="bg-gray-50 p-3 rounded-lg text-xs text-gray-700 space-y-1">
+          <p class="font-bold">Period of Retention</p>
+          <p>The collected personal information will be retained for 90 days following the return of the rental vehicle, then securely destroyed.</p>
         </div>
-        <button id="submitBtn" class="w-full bg-red-600 text-white py-4 rounded-xl font-bold text-lg mt-2">저장</button>
+        <label class="flex items-start gap-2 text-xs">
+          <input type="checkbox" id="agree" class="mt-1" required>
+          <span>I acknowledge that I have read and understood the information regarding the collection and use of my personal information by Lotte Rental Co., Ltd. and provide my consent freely.</span>
+        </label>
+        <div>
+          <p class="text-sm text-gray-600 mb-1">Signature *</p>
+          <canvas id="signature" class="signature-pad w-full h-40"></canvas>
+          <div class="flex justify-between items-center mt-1">
+            <button type="button" id="clearSign" class="text-sm text-red-600">지우기 / Clear</button>
+            <span class="text-xs text-gray-500">Date: <span id="signDate"></span></span>
+          </div>
+        </div>
+        <button id="submitBtn" class="w-full bg-red-600 text-white py-4 rounded-xl font-bold text-lg mt-2">Submit / 제출</button>
       </div>
     </div>
 
-    <!-- Admin List (hidden by default) -->
     <div id="listView" class="hidden p-4">
       <div class="bg-white rounded-2xl shadow overflow-hidden">
         <div class="p-4 flex flex-wrap justify-between items-center gap-2 border-b">
@@ -84,7 +99,6 @@
     </div>
   </div>
 
-  <!-- Camera Modal -->
   <div id="modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl p-4 w-full max-w-sm">
       <video id="video" class="w-full rounded-lg" autoplay playsinline></video>
@@ -99,9 +113,9 @@
 
   <script>
     const STORAGE_KEY = 'lotte_card_consents';
-    const ADMIN_PIN = '123456'; // 관리자 비밀번호
+    const ADMIN_PIN = '123456';
     let isAdmin = false;
-
+    document.getElementById('signDate').textContent = new Date().toLocaleDateString('en-CA');
     const canvas = document.getElementById('signature');
     const pad = new SignaturePad(canvas, { backgroundColor: '#ffffff' });
     function resize() {
@@ -114,8 +128,6 @@
     window.addEventListener('resize', resize);
     setTimeout(resize, 150);
     document.getElementById('clearSign').onclick = () => pad.clear();
-
-    // Admin toggle
     document.getElementById('btnAdmin').onclick = () => {
       if (isAdmin) {
         isAdmin = false;
@@ -133,11 +145,8 @@
         document.getElementById('modeLabel').textContent = '관리자 모드';
         document.getElementById('btnAdmin').textContent = '고객모드';
         loadList();
-      } else if (pin !== null) {
-        alert('비밀번호가 틀렸습니다');
-      }
+      } else if (pin !== null) alert('비밀번호가 틀렸습니다');
     };
-
     let stream;
     document.getElementById('scanBtn').onclick = async () => {
       try {
@@ -168,77 +177,34 @@
         setTimeout(() => document.getElementById('closeModal').click(), 700);
       } catch { status.textContent = '실패'; }
     };
-
-    function getData() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      } catch { return []; }
-    }
-    function saveData(data) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-
+    function getData() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; } }
+    function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
     function makeCSV() {
       const data = getData();
       if (!data.length) return null;
       const headers = ['시간','고객명','예약번호','연락처','이메일','카드번호','만료일','카드사','카드종류'];
-      const rows = data.map(i => [
-        new Date(i.timestamp).toLocaleString('ko-KR'),
-        i.renterName || '', i.reservationNo || '', i.contactNo || '', i.email || '',
-        i.cardNumber || '', i.expirationDate || '', i.cardIssuer || '', i.cardType || ''
-      ]);
+      const rows = data.map(i => [new Date(i.timestamp).toLocaleString('ko-KR'), i.renterName || '', i.reservationNo || '', i.contactNo || '', i.email || '', i.cardNumber || '', i.expirationDate || '', i.cardIssuer || '', i.cardType || '']);
       return [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
     }
-
     document.getElementById('submitBtn').onclick = () => {
       const name = document.getElementById('name').value.trim();
-      if (!name) return alert('고객명을 입력해 주세요');
+      if (!name) return alert("Renter's Name을 입력해 주세요");
       if (pad.isEmpty()) return alert('서명을 해 주세요');
-
-      const item = {
-        timestamp: new Date().toISOString(),
-        renterName: name,
-        reservationNo: document.getElementById('reservation').value,
-        contactNo: document.getElementById('phone').value,
-        email: document.getElementById('email').value,
-        cardNumber: document.getElementById('cardNumber').value,
-        expirationDate: document.getElementById('expiry').value,
-        cardIssuer: document.getElementById('issuer').value,
-        cardType: document.getElementById('cardType').value,
-        signature: pad.toDataURL()
-      };
-
-      const data = getData();
-      data.unshift(item);
-      saveData(data);
-
+      if (!document.getElementById('agree').checked) return alert('동의 체크를 해 주세요');
+      const item = { timestamp: new Date().toISOString(), renterName: name, reservationNo: document.getElementById('reservation').value, contactNo: document.getElementById('phone').value, email: document.getElementById('email').value, cardNumber: document.getElementById('cardNumber').value, expirationDate: document.getElementById('expiry').value, cardIssuer: document.getElementById('issuer').value, cardType: document.getElementById('cardType').value, signature: pad.toDataURL() };
+      const data = getData(); data.unshift(item); saveData(data);
       alert('저장되었습니다');
-      document.querySelectorAll('#formView input, #formView select').forEach(el => el.value = '');
+      document.querySelectorAll('#formView input, #formView select').forEach(el => { if (el.type !== 'checkbox') el.value = ''; else el.checked = false; });
       pad.clear();
     };
-
     function loadList() {
       const data = getData();
       const tbody = document.getElementById('listBody');
       const empty = document.getElementById('empty');
-      if (!data.length) {
-        tbody.innerHTML = '';
-        empty.classList.remove('hidden');
-        return;
-      }
+      if (!data.length) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
       empty.classList.add('hidden');
-      tbody.innerHTML = data.map(item => `
-        <tr class="border-t hover:bg-gray-50">
-          <td class="p-3 whitespace-nowrap">${new Date(item.timestamp).toLocaleString('ko-KR')}</td>
-          <td class="p-3">${item.renterName || '-'}</td>
-          <td class="p-3">${item.reservationNo || '-'}</td>
-          <td class="p-3">${item.contactNo || '-'}</td>
-          <td class="p-3 font-mono text-xs">${item.cardNumber || '-'}</td>
-          <td class="p-3">${item.expirationDate || '-'}</td>
-          <td class="p-3">${item.signature ? `<img src="${item.signature}" class="h-10 border rounded">` : '-'}</td>
-        </tr>`).join('');
+      tbody.innerHTML = data.map(item => `<tr class="border-t hover:bg-gray-50"><td class="p-3 whitespace-nowrap">${new Date(item.timestamp).toLocaleString('ko-KR')}</td><td class="p-3">${item.renterName || '-'}</td><td class="p-3">${item.reservationNo || '-'}</td><td class="p-3">${item.contactNo || '-'}</td><td class="p-3 font-mono text-xs">${item.cardNumber || '-'}</td><td class="p-3">${item.expirationDate || '-'}</td><td class="p-3">${item.signature ? `<img src="${item.signature}" class="h-10 border rounded">` : '-'}</td></tr>`).join('');
     }
-
     document.getElementById('downloadBtn').onclick = () => {
       const csv = makeCSV();
       if (!csv) return alert('데이터가 없습니다');
@@ -247,35 +213,18 @@
       a.download = `카드동의서_${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
     };
-
     document.getElementById('shareBtn').onclick = async () => {
       const csv = makeCSV();
       if (!csv) return alert('데이터가 없습니다');
-
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
       const file = new File([blob], `카드동의서_${new Date().toISOString().slice(0,10)}.csv`, { type: 'text/csv' });
-
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            title: '카드 동의서',
-            text: '롯데렌터카 김해공항 카드 동의서 데이터',
-            files: [file]
-          });
-        } catch (err) {
-          if (err.name !== 'AbortError') alert('공유에 실패했습니다');
-        }
-      } else {
-        document.getElementById('downloadBtn').click();
-        alert('이 기기는 공유 기능을 지원하지 않습니다. CSV 파일을 다운로드했습니다.');
-      }
+        try { await navigator.share({ title: '카드 동의서', files: [file] }); }
+        catch (err) { if (err.name !== 'AbortError') alert('공유에 실패했습니다'); }
+      } else document.getElementById('downloadBtn').click();
     };
-
     document.getElementById('clearAllBtn').onclick = () => {
-      if (confirm('저장된 모든 데이터를 삭제하시겠습니까?')) {
-        localStorage.removeItem(STORAGE_KEY);
-        loadList();
-      }
+      if (confirm('저장된 모든 데이터를 삭제하시겠습니까?')) { localStorage.removeItem(STORAGE_KEY); loadList(); }
     };
   </script>
 </body>
