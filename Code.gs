@@ -1,22 +1,15 @@
-// Google Apps Script - Code.gs
+// Google Apps Script - Code.gs (simplified)
 const SPREADSHEET_ID = '109-lTXvrmpkFRoUupbL0mTZazVNrYbv6ouK-OFw4CkA';
 const SHEET_NAME = 'Sheet1';
 
 function doPost(e) {
   try {
-    let data;
-    if (e.postData && e.postData.contents) {
-      data = JSON.parse(e.postData.contents);
-    } else if (e.parameter && e.parameter.data) {
-      data = JSON.parse(e.parameter.data);
-    } else {
-      throw new Error('No data');
-    }
+    const data = e.parameter || {};
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     let sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) {
       sheet = ss.insertSheet(SHEET_NAME);
-      sheet.appendRow(['시간','고객명','예약번호','연락처','이메일','카드번호','만료일','카드사','카드종류','언어','서명']);
+      sheet.appendRow(['시간','고객명','예약번호','연락처','이메일','카드번호','만료일','카드사','카드종류','언어']);
     }
     sheet.appendRow([
       new Date().toISOString(),
@@ -28,8 +21,7 @@ function doPost(e) {
       data.expirationDate || '',
       data.cardIssuer || '',
       data.cardType || '',
-      data.lang || '',
-      data.signature || ''
+      data.lang || ''
     ]);
     return ContentService.createTextOutput(JSON.stringify({success: true}))
       .setMimeType(ContentService.MimeType.JSON);
@@ -43,9 +35,9 @@ function doGet(e) {
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+    if (!sheet) return ContentService.createTextOutput('[]').setMimeType(ContentService.MimeType.JSON);
     const data = sheet.getDataRange().getValues();
-    if (data.length <= 1) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+    if (data.length <= 1) return ContentService.createTextOutput('[]').setMimeType(ContentService.MimeType.JSON);
     const headers = data[0];
     const rows = data.slice(1).reverse().map(row => {
       const obj = {};
@@ -60,8 +52,7 @@ function doGet(e) {
         expirationDate: obj['만료일'] || '',
         cardIssuer: obj['카드사'] || '',
         cardType: obj['카드종류'] || '',
-        lang: obj['언어'] || '',
-        signature: obj['서명'] || ''
+        lang: obj['언어'] || ''
       };
     });
     return ContentService.createTextOutput(JSON.stringify(rows)).setMimeType(ContentService.MimeType.JSON);
