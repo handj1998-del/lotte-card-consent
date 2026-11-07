@@ -69,7 +69,8 @@ const translations={
     "translationScope": "언어 선택은 입력 화면에만 적용됩니다. 원본 동의서와 PDF의 문구는 번역하거나 변경하지 않습니다.",
     "uploadPDF": "PDF 업로드",
     "uploadNotice": "외부 업로드 페이지를 새 탭에서 엽니다. PDF를 먼저 저장한 뒤 그 페이지에서 직접 선택하세요. 파일은 자동 전송되지 않습니다.",
-    "reservationCustomerGroup": "예약·고객 정보"
+    "reservationCustomerGroup": "예약·고객 정보",
+    "formActions": "동의서 작업"
   },
   "en": {
     "appTitle": "Card information consent form",
@@ -139,7 +140,8 @@ const translations={
     "translationScope": "The language setting applies to the entry interface only. The original consent form and PDF wording are not translated or changed.",
     "uploadPDF": "Upload PDF",
     "uploadNotice": "Opens a separate upload page in a new tab. Save your PDF first, then select it on that page. Nothing is sent automatically.",
-    "reservationCustomerGroup": "Reservation & customer"
+    "reservationCustomerGroup": "Reservation & customer",
+    "formActions": "Form actions"
   },
   "zh-CN": {
     "appTitle": "银行卡信息同意书",
@@ -209,7 +211,8 @@ const translations={
     "translationScope": "语言设置仅适用于填写界面。原始同意书和 PDF 的文字不会翻译或更改。",
     "uploadPDF": "上传 PDF",
     "uploadNotice": "在新标签页打开外部上传页面。请先保存 PDF，再到该页面自行选择文件。文件不会自动上传。",
-    "reservationCustomerGroup": "预订与客户信息"
+    "reservationCustomerGroup": "预订与客户信息",
+    "formActions": "表格操作"
   },
   "zh-TW": {
     "appTitle": "卡片資料同意書",
@@ -279,7 +282,8 @@ const translations={
     "translationScope": "語言設定僅適用於填寫介面。原始同意書與 PDF 的文字不會翻譯或變更。",
     "uploadPDF": "上傳 PDF",
     "uploadNotice": "在新分頁開啟外部上傳頁面。請先儲存 PDF，再到該頁面自行選擇檔案。不會自動上傳檔案。",
-    "reservationCustomerGroup": "預約與客戶資料"
+    "reservationCustomerGroup": "預約與客戶資料",
+    "formActions": "表格操作"
   },
   "ja": {
     "appTitle": "カード情報の取扱い同意書",
@@ -349,12 +353,13 @@ const translations={
     "translationScope": "言語設定は入力画面のみに適用されます。原本の同意書とPDFの文言は翻訳・変更しません。",
     "uploadPDF": "PDF アップロード",
     "uploadNotice": "外部のアップロードページを新しいタブで開きます。先にPDFを保存し、そのページでファイルを選択してください。自動送信はされません。",
-    "reservationCustomerGroup": "予約・お客様情報"
+    "reservationCustomerGroup": "予約・お客様情報",
+    "formActions": "フォームの操作"
   }
 };
 let currentLanguage='ko';
 function t(key,vars={}){let text=translations[currentLanguage][key]||translations.ko[key]||key;for(const [name,value] of Object.entries(vars))text=text.replaceAll(`{${name}}`,value);return text;}
 function translatedNode(key,tag='span'){const node=document.createElement(tag);node.setAttribute('data-i18n',key);node.textContent=t(key);return node;}
 function setStatus(key){document.getElementById('status').replaceChildren(translatedNode(key));}
-function setLanguage(language){if(!translations[language])return;currentLanguage=language;document.documentElement.lang=language;document.title=t('appTitle');document.querySelectorAll('[data-language-picker]').forEach(node=>node.value=language);document.querySelectorAll('[data-i18n]').forEach(node=>{node.textContent=t(node.getAttribute('data-i18n'));});document.querySelectorAll('[data-i18n-title]').forEach(node=>node.title=t(node.getAttribute('data-i18n-title')));document.querySelectorAll('[data-language-picker]').forEach(node=>node.setAttribute('aria-label',t('language')));document.querySelectorAll('[data-original-page]').forEach(node=>node.alt=t('originalAlt',{page:node.dataset.originalPage}));document.querySelectorAll('[data-preview-page]').forEach(node=>node.setAttribute('aria-label',t('previewAlt',{page:node.dataset.previewPage})));if(typeof updateTranslatedControls==='function')updateTranslatedControls();}
+function setLanguage(language){if(!translations[language])return;currentLanguage=language;document.documentElement.lang=language;document.title=t('appTitle');document.querySelectorAll('[data-language-picker]').forEach(node=>node.value=language);document.querySelectorAll('[data-i18n]').forEach(node=>{node.textContent=t(node.getAttribute('data-i18n'));});document.querySelectorAll('[data-i18n-aria]').forEach(node=>node.setAttribute('aria-label',t(node.getAttribute('data-i18n-aria'))));document.querySelectorAll('[data-i18n-title]').forEach(node=>node.title=t(node.getAttribute('data-i18n-title')));document.querySelectorAll('[data-language-picker]').forEach(node=>node.setAttribute('aria-label',t('language')));document.querySelectorAll('[data-original-page]').forEach(node=>node.alt=t('originalAlt',{page:node.dataset.originalPage}));document.querySelectorAll('[data-preview-page]').forEach(node=>node.setAttribute('aria-label',t('previewAlt',{page:node.dataset.previewPage})));if(typeof updateTranslatedControls==='function')updateTranslatedControls();}
 document.querySelectorAll('[data-language-picker]').forEach(node=>node.addEventListener('change',event=>setLanguage(event.target.value)));

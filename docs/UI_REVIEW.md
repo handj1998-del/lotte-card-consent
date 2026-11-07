@@ -28,6 +28,7 @@ loading/errors, reset, signatures, preprinted ticks, optional drivers and saving
 - iPad guidance now consistently says clearing the form does not delete downloaded
   PDFs, replacing the awkward “not deleted from this screen”.
 - Preprinted marks are distinguished from the current customer's consent.
+- Screen-reader group labels are translated along with visible labels.
 - Original-PDF text is explicitly outside the scope of the language selector.
 
 ## Layout and evidence
