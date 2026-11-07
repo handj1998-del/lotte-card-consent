@@ -1,41 +1,36 @@
 // Google Apps Script - Code.gs
-// Deploy as Web App: Execute as Me, Access: Anyone
-
 const SPREADSHEET_ID = '109-lTXvrmpkFRoUupbL0mTZazVNrYbv6ouK-OFw4CkA';
 const SHEET_NAME = 'Sheet1';
 
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) {
-      sheet = ss.insertSheet(SHEET_NAME);
-      sheet.appendRow(['시간','고객명','예약번호','연락처','이메일','카드번호','만료일','카드사','카드종류','언어','서명']);
-    }
-    sheet.appendRow([
-      new Date().toISOString(),
-      data.renterName || '',
-      data.reservationNo || '',
-      data.contactNo || '',
-      data.email || '',
-      data.cardNumber || '',
-      data.expirationDate || '',
-      data.cardIssuer || '',
-      data.cardType || '',
-      data.lang || '',
-      data.signature || ''
-    ]);
-    return ContentService.createTextOutput(JSON.stringify({success: true}))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
 function doGet(e) {
   try {
+    // If data parameter exists, save it
+    if (e.parameter && e.parameter.data) {
+      const data = JSON.parse(decodeURIComponent(e.parameter.data));
+      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      let sheet = ss.getSheetByName(SHEET_NAME);
+      if (!sheet) {
+        sheet = ss.insertSheet(SHEET_NAME);
+        sheet.appendRow(['시간','고객명','예약번호','연락처','이메일','카드번호','만료일','카드사','카드종류','언어','서명']);
+      }
+      sheet.appendRow([
+        new Date().toISOString(),
+        data.renterName || '',
+        data.reservationNo || '',
+        data.contactNo || '',
+        data.email || '',
+        data.cardNumber || '',
+        data.expirationDate || '',
+        data.cardIssuer || '',
+        data.cardType || '',
+        data.lang || '',
+        data.signature || ''
+      ]);
+      return ContentService.createTextOutput(JSON.stringify({success: true}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Otherwise return list
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
