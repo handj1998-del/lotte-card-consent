@@ -6,8 +6,6 @@ const translations={
     "brand": "LOTTE rent-a-car · 김해공항",
     "preview": "미리보기",
     "save": "PDF 저장",
-    "flow": "입력 → 서명 → PDF 저장",
-    "helpSummary": "안내 · 자동 전송 없음",
     "sourceInfo": "원본 2쪽 PDF는 변경하지 않고 사본의 빈칸에 입력·날짜·서명만 추가합니다.",
     "privacy": "이 입력 화면은 작성 내용과 서명을 서버로 전송하거나 자동 저장하지 않습니다. 새로고침하면 내용이 사라집니다. 내려받은 PDF는 안전하게 보관하세요.",
     "ipad": "iPad: PDF가 열리면 공유 → ‘파일에 저장’을 선택하세요. 입력을 초기화해도 이미 저장한 PDF는 삭제되지 않습니다.",
@@ -71,8 +69,7 @@ const translations={
     "uploadNotice": "외부 업로드 페이지를 새 탭에서 엽니다. PDF를 먼저 저장한 뒤 그 페이지에서 직접 선택하세요. 파일은 자동 전송되지 않습니다.",
     "reservationCustomerGroup": "예약·고객 정보",
     "formActions": "동의서 작업",
-    "guideTitle": "작성 전 안내 · 원본 1쪽",
-    "guideNote": "원본 1쪽의 안내문을 선택한 언어로 표시합니다. 저장되는 PDF의 원문은 변경하지 않습니다.",
+    "guideTitle": "작성 전 안내",
     "guideScroll": "아래로 스크롤해 안내 전체를 읽어 주세요.",
     "guideStart": "안내를 읽고 작성으로 이동",
     "guideReturn": "안내 다시 보기",
@@ -102,15 +99,14 @@ const translations={
     "cardFormatTyping": "입력 중… 카드번호를 끝까지 입력하세요.",
     "cardFormatNote": "(번호 형식만 확인하며, 실제 카드 인증이 아닙니다.)",
     "entryHeading": "고객 정보 입력",
-    "phoneHelp": "국가번호 안내 (한국어 화면에서는 표시하지 않음)"
+    "phoneHelp": "국가번호 안내 (한국어 화면에서는 표시하지 않음)",
+    "moreMenu": "더 보기"
   },
   "en": {
     "appTitle": "Card information consent form",
     "brand": "LOTTE rent-a-car · Gimhae Airport",
     "preview": "Preview",
     "save": "Save PDF",
-    "flow": "Fill in → Sign → Save PDF",
-    "helpSummary": "Help · No automatic uploads",
     "sourceInfo": "The original two-page PDF stays unchanged. Your details, date and signature are added only to blank fields in a copy.",
     "privacy": "This form does not send your entries or signatures to a server or save them automatically. Refreshing clears them. Keep any downloaded PDF secure.",
     "ipad": "iPad: When the PDF opens, tap Share → Save to Files. Clearing the form does not delete downloaded PDFs.",
@@ -174,8 +170,7 @@ const translations={
     "uploadNotice": "Opens a separate upload page in a new tab. Save your PDF first, then select it on that page. Nothing is sent automatically.",
     "reservationCustomerGroup": "Reservation & customer",
     "formActions": "Form actions",
-    "guideTitle": "Before you fill in · Original page 1",
-    "guideNote": "The guidance from page 1 is shown in your selected language. The original wording in the saved PDF stays unchanged.",
+    "guideTitle": "Before you fill in",
     "guideScroll": "Scroll down to read the full guidance.",
     "guideStart": "Continue to the form",
     "guideReturn": "Read guidance again",
@@ -205,15 +200,14 @@ const translations={
     "cardFormatTyping": "Typing… please enter the full card number.",
     "cardFormatNote": "(This checks the number format only. It does not verify the card.)",
     "entryHeading": "Enter your details",
-    "phoneHelp": "Please include your country calling code."
+    "phoneHelp": "Please include your country calling code.",
+    "moreMenu": "More"
   },
   "zh-CN": {
     "appTitle": "银行卡信息同意书",
     "brand": "LOTTE rent-a-car · 金海机场",
     "preview": "预览",
     "save": "保存 PDF",
-    "flow": "填写 → 签名 → 保存 PDF",
-    "helpSummary": "说明 · 不自动上传",
     "sourceInfo": "原始两页 PDF 保持不变。填写的信息、日期和签名只添加到副本的空白栏中。",
     "privacy": "本填写页面不会将填写内容或签名发送到服务器，也不会自动保存。刷新后内容将被清除。请妥善保管下载的 PDF。",
     "ipad": "iPad：打开 PDF 后，轻点“共享”→“存储到‘文件’”。清空表格不会删除已下载的 PDF。",
@@ -277,8 +271,7 @@ const translations={
     "uploadNotice": "在新标签页打开外部上传页面。请先保存 PDF，再到该页面自行选择文件。文件不会自动上传。",
     "reservationCustomerGroup": "预订与客户信息",
     "formActions": "表格操作",
-    "guideTitle": "填写前须知 · 原件第 1 页",
-    "guideNote": "以下以您选择的语言显示原件第 1 页的说明。保存的 PDF 仍保留原文，不作修改。",
+    "guideTitle": "填写前须知",
     "guideScroll": "请向下滚动，阅读完整说明。",
     "guideStart": "阅读后前往填写",
     "guideReturn": "再次查看说明",
@@ -308,15 +301,14 @@ const translations={
     "cardFormatTyping": "正在输入… 请输入完整卡号。",
     "cardFormatNote": "（仅检查号码格式，并非实际验证银行卡。）",
     "entryHeading": "填写您的信息",
-    "phoneHelp": "请输入包含国家/地区代码的电话号码。"
+    "phoneHelp": "请输入包含国家/地区代码的电话号码。",
+    "moreMenu": "更多"
   },
   "zh-TW": {
     "appTitle": "卡片資料同意書",
     "brand": "LOTTE rent-a-car · 金海機場",
     "preview": "預覽",
     "save": "儲存 PDF",
-    "flow": "填寫 → 簽名 → 儲存 PDF",
-    "helpSummary": "說明 · 不會自動上傳",
     "sourceInfo": "原始兩頁 PDF 保持不變。填寫的資料、日期和簽名只會加在副本的空白欄位。",
     "privacy": "本填寫頁面不會將填寫內容或簽名傳送至伺服器，也不會自動儲存。重新整理後內容會清除。請妥善保管下載的 PDF。",
     "ipad": "iPad：開啟 PDF 後，點選「分享」→「儲存到『檔案』」。清空表格不會刪除已下載的 PDF。",
@@ -380,8 +372,7 @@ const translations={
     "uploadNotice": "在新分頁開啟外部上傳頁面。請先儲存 PDF，再到該頁面自行選擇檔案。不會自動上傳檔案。",
     "reservationCustomerGroup": "預約與客戶資料",
     "formActions": "表格操作",
-    "guideTitle": "填寫前須知 · 原件第 1 頁",
-    "guideNote": "以下以您選擇的語言顯示原件第 1 頁的說明。儲存的 PDF 會保留原文，不作變更。",
+    "guideTitle": "填寫前須知",
     "guideScroll": "請向下捲動，閱讀完整說明。",
     "guideStart": "閱讀後前往填寫",
     "guideReturn": "再次查看說明",
@@ -411,15 +402,14 @@ const translations={
     "cardFormatTyping": "輸入中… 請輸入完整卡號。",
     "cardFormatNote": "（僅檢查號碼格式，並非實際驗證卡片。）",
     "entryHeading": "填寫您的資料",
-    "phoneHelp": "請輸入包含國家／地區代碼的電話號碼。"
+    "phoneHelp": "請輸入包含國家／地區代碼的電話號碼。",
+    "moreMenu": "更多"
   },
   "ja": {
     "appTitle": "カード情報の取扱い同意書",
     "brand": "LOTTE rent-a-car · 金海空港",
     "preview": "プレビュー",
     "save": "PDF 保存",
-    "flow": "入力 → 署名 → PDF 保存",
-    "helpSummary": "使い方 · 自動送信なし",
     "sourceInfo": "原本のPDF（全2ページ）は変更せず、コピーの空欄に入力内容・日付・署名だけを追加します。",
     "privacy": "この入力画面では、入力内容や署名をサーバーに送信したり、自動保存したりすることはありません。再読み込みすると内容が消去されます。保存したPDFは安全に保管してください。",
     "ipad": "iPad：PDFが開いたら「共有」→「ファイルに保存」を選んでください。入力をクリアしても、保存済みのPDFは削除されません。",
@@ -483,8 +473,7 @@ const translations={
     "uploadNotice": "外部のアップロードページを新しいタブで開きます。先にPDFを保存し、そのページでファイルを選択してください。自動送信はされません。",
     "reservationCustomerGroup": "予約・お客様情報",
     "formActions": "フォームの操作",
-    "guideTitle": "入力前のご案内 · 原本1ページ目",
-    "guideNote": "原本1ページ目の案内を、選択した言語で表示しています。保存するPDFの原文は変更しません。",
+    "guideTitle": "ご記入前のご案内",
     "guideScroll": "下にスクロールして、案内全文をご確認ください。",
     "guideStart": "確認して入力へ進む",
     "guideReturn": "案内をもう一度読む",
@@ -514,7 +503,8 @@ const translations={
     "cardFormatTyping": "入力中… カード番号を最後まで入力してください。",
     "cardFormatNote": "（番号の形式のみを確認しており、実際のカード認証ではありません。）",
     "entryHeading": "お客様情報の入力",
-    "phoneHelp": "国番号を含めて電話番号を入力してください。"
+    "phoneHelp": "国番号を含めて電話番号を入力してください。",
+    "moreMenu": "その他"
   }
 };
 let currentLanguage='ko';

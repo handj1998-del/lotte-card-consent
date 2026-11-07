@@ -48,3 +48,4 @@ body.view-entry .card-format-status{font-size:17px}
 .phone-help{margin:2px 0 0;font-size:15px;font-weight:400;line-height:1.45;color:#3d4b5c}
 body.view-entry .phone-help{font-size:16px}
 html[lang="ko"] .phone-help{display:none}
+.guidance-panel{padding-top:14px}.header-meta{justify-content:flex-end}

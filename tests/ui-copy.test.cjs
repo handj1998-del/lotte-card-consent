@@ -12,6 +12,6 @@ const hash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'as
 const guideKeys=['guidePurposeTitle','guideIntro','guideExtra','guideDamage','guideFines','guideTolls','guideRecovery','guideItemsTitle','guideItems','guideRetentionTitle','guideRetention','guideSettlementTitle','guideNotification','guidePayment','guideRightsTitle','guideRights','guideSigning','guideAckTitle','guideAck','guideEligibility'];
 for(const language of languages){for(const key of guideKeys){assert(dictionaries[language][key]);assert(html.includes(`data-i18n="${key}"`));}assert(/full damage waiver/i.test(dictionaries[language].guideDamage));}
 const retentionChecks={'ko':/반납한 후 90일/,'en':/90 days following the return of the rental vehicle/,'zh-CN':/归还后保留 90 天/,'zh-TW':/歸還後保存 90 天/,'ja':/返却後90日間/};for(const language of languages)assert(retentionChecks[language].test(dictionaries[language].guideRetention));
-assert(/<details[^>]*id="guidancePanel"[^>]*\bopen/.test(html));assert(html.includes('id="guideText"'));assert(html.includes('id="guideStart"'));assert(html.includes('id="guideReturn"'));
+assert(/<section[^>]*id="guidancePanel"/.test(html));assert(html.includes('id="guideText"'));assert(html.includes('id="guideStart"'));assert(html.includes('id="guideReturn"'));
 assert(!/fetch\(|XMLHttpRequest|localStorage|sessionStorage|sendBeacon/.test(read('guide.js')));
 console.log(`PASS: ${languages.length} languages × ${keys.length} complete keys, interpolation/bindings, compact structure, navigation-only upload and original PDF hash`);

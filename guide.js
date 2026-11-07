@@ -6,7 +6,7 @@
   function show(view){
     body.classList.toggle('view-guide',view==='guide');body.classList.toggle('view-entry',view==='entry');
     panel.hidden=view!=='guide';panel.open=true;
-    const target=view==='guide'?panel.querySelector('summary'):document.getElementById('entryHeading');
+    const target=view==='guide'?document.getElementById('guideHeading'):document.getElementById('entryHeading');
     window.scrollTo({top:0,behavior:'auto'});
     target.focus({preventScroll:true}); // focuses a heading/container, not an input: no keyboard pop-up
   }

@@ -4,7 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const html=read('index.html'),css=read('consent.css'),guide=read('guide.js');
 function el(id){return{id,hidden:false,open:true,focused:0,listeners:{},value:'',addEventListener(t,f){this.listeners[t]=f},focus(){this.focused++},querySelector(){return summary}};}
-const summary=el('summary'),ids={};for(const id of ['guidancePanel','entry','guideStart','guideReturn','entryHeading'])ids[id]=el(id);
+const summary=el('summary'),ids={};for(const id of ['guidancePanel','entry','guideStart','guideReturn','entryHeading','guideHeading'])ids[id]=el(id);
 const classes=new Set();const body={classList:{add:c=>classes.add(c),toggle:(c,on)=>on?classes.add(c):classes.delete(c)}};
 const field={value:'SYNTH-RES-001'},sig={src:'data:image/png;base64,AAAA'},lang={value:'ja'};
 vm.runInNewContext(guide,{document:{body,getElementById:id=>ids[id]},window:{scrollTo(){}}});
