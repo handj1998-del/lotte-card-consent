@@ -10,3 +10,9 @@ assert(!/<details[^>]*id="guidancePanel"/.test(html));assert(/<h2 id="guideHeadi
 for(const id of ['guideText','guideStart','guideReturn','clear','refresh'])assert(html.includes(`id="${id}"`),id);
 for(const k of ['guideRetention','guideAck','guideRights'])assert(html.includes(`data-i18n="${k}"`),k);
 console.log('PASS: removed strings absent ×5 languages, guide body/buttons and More utilities kept, hidden guide heading');
+{const css=read('consent.css');
+// no visible meta helper/explainer before the guide body: first visible child after the sr-only heading is #guideText
+const panel=html.match(/<section id="guidancePanel"[^>]*>(.*?)<div id="guideText"/s)[1];assert.equal(panel.replace(/<h2 id="guideHeading" class="sr-only"[^>]*>[^<]*<\/h2>/,'').trim(),'',`unexpected guide meta: ${panel}`);
+for(const [l,t] of Object.entries(d))assert(!('guideScroll' in t),l);assert(!html.includes('guide-scroll'));
+assert(/(^|\})\.sr-only\{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect\(0,0,0,0\)/.test(css));assert(!/guideHeading|guidance-panel\s*>?\s*h2/.test(css),'sr-only heading not restyled');
+console.log('PASS: guide starts directly with clause body; heading remains sr-only (visually hidden) in all languages');}
