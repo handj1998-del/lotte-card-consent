@@ -100,7 +100,8 @@ const translations={
     "cardFormatValid": "✓ 형식이 맞습니다.",
     "cardFormatInvalid": "✕ 형식이 맞지 않습니다.",
     "cardFormatTyping": "입력 중… 카드번호를 끝까지 입력하세요.",
-    "cardFormatNote": "(번호 형식만 확인하며, 실제 카드 인증이 아닙니다.)"
+    "cardFormatNote": "(번호 형식만 확인하며, 실제 카드 인증이 아닙니다.)",
+    "entryHeading": "고객 정보 입력"
   },
   "en": {
     "appTitle": "Card information consent form",
@@ -201,7 +202,8 @@ const translations={
     "cardFormatValid": "✓ The format is valid.",
     "cardFormatInvalid": "✕ The format is not valid.",
     "cardFormatTyping": "Typing… please enter the full card number.",
-    "cardFormatNote": "(This checks the number format only. It does not verify the card.)"
+    "cardFormatNote": "(This checks the number format only. It does not verify the card.)",
+    "entryHeading": "Enter your details"
   },
   "zh-CN": {
     "appTitle": "银行卡信息同意书",
@@ -302,7 +304,8 @@ const translations={
     "cardFormatValid": "✓ 格式正确。",
     "cardFormatInvalid": "✕ 格式不正确。",
     "cardFormatTyping": "正在输入… 请输入完整卡号。",
-    "cardFormatNote": "（仅检查号码格式，并非实际验证银行卡。）"
+    "cardFormatNote": "（仅检查号码格式，并非实际验证银行卡。）",
+    "entryHeading": "填写您的信息"
   },
   "zh-TW": {
     "appTitle": "卡片資料同意書",
@@ -403,7 +406,8 @@ const translations={
     "cardFormatValid": "✓ 格式正確。",
     "cardFormatInvalid": "✕ 格式不正確。",
     "cardFormatTyping": "輸入中… 請輸入完整卡號。",
-    "cardFormatNote": "（僅檢查號碼格式，並非實際驗證卡片。）"
+    "cardFormatNote": "（僅檢查號碼格式，並非實際驗證卡片。）",
+    "entryHeading": "填寫您的資料"
   },
   "ja": {
     "appTitle": "カード情報の取扱い同意書",
@@ -504,7 +508,8 @@ const translations={
     "cardFormatValid": "✓ 形式は正しいです。",
     "cardFormatInvalid": "✕ 形式が正しくありません。",
     "cardFormatTyping": "入力中… カード番号を最後まで入力してください。",
-    "cardFormatNote": "（番号の形式のみを確認しており、実際のカード認証ではありません。）"
+    "cardFormatNote": "（番号の形式のみを確認しており、実際のカード認証ではありません。）",
+    "entryHeading": "お客様情報の入力"
   }
 };
 let currentLanguage='ko';

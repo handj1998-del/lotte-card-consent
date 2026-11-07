@@ -23,3 +23,25 @@ dialog,#previewDialog{position:fixed;inset:auto;top:calc(var(--visible-viewport-
 .guidance-panel{margin:8px 0 14px;padding:0 16px 14px;border:1px solid #bac9da;border-radius:10px;background:#fff}.guidance-panel>summary{font-size:17px;min-height:48px;padding:12px 0;line-height:1.45;color:#173f72}.guidance-panel>p{font-size:14px;line-height:1.6;margin:0 0 8px}.guidance-panel .guide-scroll{font-weight:600;color:#536274}.guide-text{max-height:360px;max-height:min(44dvh,420px);overflow-y:auto;overscroll-behavior:contain;padding:4px 12px 8px 2px;scrollbar-gutter:stable;font-size:16px;line-height:1.75;border-top:1px solid #dbe3ec;border-bottom:1px solid #dbe3ec}.guide-text h3{font-size:17px;line-height:1.5;margin:16px 0 8px}.guide-text p,.guide-text ul,.guide-text blockquote{margin:8px 0 12px}.guide-text ul{padding-left:24px}.guide-text li{margin-bottom:8px}.guide-text blockquote{padding:8px 12px;border-left:3px solid #a9bbd0;background:#f5f8fc}.guide-retention{border-left:3px solid #b82328;padding:8px 12px;background:#fff6f5;font-weight:600}.guide-scope{color:#536274;font-size:14px;line-height:1.65}#guideStart{margin-top:12px;min-height:44px;background:#1452a3;color:white}.guide-return{min-height:44px;margin:0 0 8px;padding:8px 14px;color:#1452a3;border-color:#9dafc4}.entry-workspace{min-width:0}#entry{scroll-margin-top:12px}#entry:focus{outline:none}#guideText:focus-visible{outline:3px solid #8dbaf1;outline-offset:2px}@media(min-width:1200px){main{max-width:1440px;display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:20px;align-items:start}.app-header{max-width:1440px}.guidance-panel{position:sticky;top:12px;margin:8px 0;max-height:calc(100dvh - 24px);overflow-y:auto}.guide-text{max-height:calc(100dvh - 250px);min-height:200px}.entry-workspace{padding-top:8px}}@media(max-width:699px){.guidance-panel{padding:0 12px 12px}.guide-text{font-size:16px;max-height:52dvh}.guide-return,#guideStart{width:100%}}
 
 .card-format-status{grid-column:1/-1;margin:-4px 0 4px;font-size:14px;line-height:1.4;min-height:1.4em}.card-format-status[data-state=valid]{color:#17663a;font-weight:600}.card-format-status[data-state=invalid]{color:#b3261e;font-weight:600}.card-format-status[data-state=incomplete]{color:#555}
+
+/* Two distinct views: full-width guidance, then a large, comfortable entry form. */
+body.view-guide .entry-workspace{display:none}
+body.view-entry #guidancePanel,#guidancePanel[hidden]{display:none!important}
+body.view-guide main,body.view-entry main{display:block;max-width:1100px}
+body.view-guide .guide-text{max-height:none;overflow:visible}
+body.view-guide #guideStart{width:100%;min-height:56px;font-size:18px}
+body.view-entry .guide-return{min-height:52px;font-size:17px;margin-bottom:14px}
+body.view-entry #entry{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+body.view-entry #entry>fieldset,body.view-entry #entry>fieldset:first-of-type,body.view-entry #extraDrivers{grid-column:1/-1;grid-row:auto;margin:0;padding:16px 18px 20px}
+body.view-entry #entry legend{font-size:20px;font-weight:700}
+body.view-entry #entry .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px}
+body.view-entry #entry .input-label{font-size:18px;gap:8px;line-height:1.4}
+body.view-entry #entry .entry-field{height:58px;min-height:58px;padding:12px 14px;font-size:18px}
+body.view-entry .signer-card>p,body.view-entry #entry .small,body.view-entry #extraDrivers summary,body.view-entry #extraDrivers>p{font-size:16px}
+body.view-entry .signer-row{grid-template-columns:minmax(0,1fr);gap:18px}
+body.view-entry .signer-row .signature-entry,body.view-entry .signature-entry{height:120px;min-height:120px;font-size:18px}
+body.view-entry .signer-row .signature-entry img,body.view-entry .signature-entry img{max-height:108px}
+body.view-entry .entry-actions button{min-height:58px;font-size:18px}
+body.view-entry .card-format-status{font-size:17px}
+@media(max-width:699px){body.view-entry #entry .form-grid{grid-template-columns:minmax(0,1fr)}}
+.entry-heading{font-size:22px;margin:4px 0 10px;color:#173f72}#entryHeading:focus{outline:none}
