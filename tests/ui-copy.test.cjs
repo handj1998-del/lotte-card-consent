@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const source=read('i18n.js');const start=source.indexOf('const translations=')+'const translations='.length;const end=source.indexOf(';\nlet currentLanguage',start);const dictionaries=JSON.parse(source.slice(start,end));
+const languages=['ko','en','zh-CN','zh-TW','ja'];assert.deepEqual(Object.keys(dictionaries),languages);const keys=Object.keys(dictionaries.ko).sort();const html=read('index.html');
+for(const language of languages){const dictionary=dictionaries[language];assert.deepEqual(Object.keys(dictionary).sort(),keys);for(const key of keys){assert.equal(typeof dictionary[key],'string');assert(dictionary[key].trim(),`${language}.${key}`);const placeholders=text=>[...text.matchAll(/\{([^}]+)\}/g)].map(match=>match[1]).sort();assert.deepEqual(placeholders(dictionary[key]),placeholders(dictionaries.ko[key]),`${language}.${key}`);}for(const [,key] of html.matchAll(/data-i18n(?:-title)?="([^"]+)"/g))assert(dictionary[key],`${language}.${key}`);assert(dictionary.expiry.includes('MM/YYYY'));assert(dictionary.expiryInvalid.includes('MM/YYYY'));}
+assert(html.includes('https://orbit-topaz-forest-kite.grok.me/agreement'));assert(html.includes('target="_blank" rel="noopener noreferrer"'));assert(!html.includes('type="file"'));
+for(const id of ['reservationFields','customerFields','cardFields','signerFields','renterSignature','extraDrivers','previewEntry','page1','page2'])assert.equal([...html.matchAll(new RegExp(`id="${id}"`,'g'))].length,1,id);
+assert(!/<details[^>]*id="extraDrivers"[^>]*\bopen\b/.test(html));assert(html.includes('class="signer-row"'));assert(html.includes('class="customer-card"'));
+const css=read('consent.css');assert(css.includes('#entry{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));assert(css.includes('min-height:44px'));assert(!/zoom\s*:|transform\s*:\s*scale/.test(css));
+const hash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'assets/consent/original.pdf'))).digest('hex');assert.equal(hash,'1a57278495f4a6ac8b8c07af37212381eda01ae80989a2d316f36e3486edd030');
+console.log(`PASS: ${languages.length} languages × ${keys.length} complete keys, interpolation/bindings, compact structure, navigation-only upload and original PDF hash`);
