@@ -66,7 +66,9 @@ const translations={
     "language": "언어",
     "originalAlt": "변경하지 않은 원본 {page}쪽",
     "previewAlt": "{page}쪽 PDF 미리보기",
-    "translationScope": "언어 선택은 입력 화면에만 적용됩니다. 원본 동의서와 PDF의 문구는 번역하거나 변경하지 않습니다."
+    "translationScope": "언어 선택은 입력 화면에만 적용됩니다. 원본 동의서와 PDF의 문구는 번역하거나 변경하지 않습니다.",
+    "uploadPDF": "PDF 업로드",
+    "uploadNotice": "외부 업로드 페이지를 새 탭에서 엽니다. 파일은 자동 전송되지 않으며 직접 선택해야 합니다."
   },
   "en": {
     "appTitle": "Card information consent",
@@ -133,7 +135,9 @@ const translations={
     "language": "Language",
     "originalAlt": "Unchanged original, page {page}",
     "previewAlt": "PDF preview, page {page}",
-    "translationScope": "The language setting applies to the entry interface only. The original consent form and PDF wording are not translated or changed."
+    "translationScope": "The language setting applies to the entry interface only. The original consent form and PDF wording are not translated or changed.",
+    "uploadPDF": "Upload PDF",
+    "uploadNotice": "Opens the external upload page in a new tab. No file is sent automatically; choose the file yourself."
   },
   "zh-CN": {
     "appTitle": "银行卡信息使用同意书",
@@ -200,7 +204,9 @@ const translations={
     "language": "语言",
     "originalAlt": "未修改的原件，第 {page} 页",
     "previewAlt": "PDF 预览，第 {page} 页",
-    "translationScope": "语言设置仅适用于填写界面。原始同意书和 PDF 的文字不会翻译或更改。"
+    "translationScope": "语言设置仅适用于填写界面。原始同意书和 PDF 的文字不会翻译或更改。",
+    "uploadPDF": "上传 PDF",
+    "uploadNotice": "在新标签页打开外部上传页面。不会自动发送文件，请自行选择文件。"
   },
   "zh-TW": {
     "appTitle": "信用卡／簽帳金融卡資料同意書",
@@ -267,7 +273,9 @@ const translations={
     "language": "語言",
     "originalAlt": "未修改的原件，第 {page} 頁",
     "previewAlt": "PDF 預覽，第 {page} 頁",
-    "translationScope": "語言設定僅適用於填寫介面。原始同意書與 PDF 的文字不會翻譯或變更。"
+    "translationScope": "語言設定僅適用於填寫介面。原始同意書與 PDF 的文字不會翻譯或變更。",
+    "uploadPDF": "上傳 PDF",
+    "uploadNotice": "在新分頁開啟外部上傳頁面。不會自動傳送檔案，請自行選擇檔案。"
   },
   "ja": {
     "appTitle": "カード情報利用同意書",
@@ -334,12 +342,14 @@ const translations={
     "language": "言語",
     "originalAlt": "変更していない原本 {page} ページ",
     "previewAlt": "PDF プレビュー {page} ページ",
-    "translationScope": "言語設定は入力画面のみに適用されます。原本の同意書とPDFの文言は翻訳・変更しません。"
+    "translationScope": "言語設定は入力画面のみに適用されます。原本の同意書とPDFの文言は翻訳・変更しません。",
+    "uploadPDF": "PDF アップロード",
+    "uploadNotice": "外部アップロードページを新しいタブで開きます。ファイルは自動送信されません。ご自身で選択してください。"
   }
 };
 let currentLanguage='ko';
 function t(key,vars={}){let text=translations[currentLanguage][key]||translations.ko[key]||key;for(const [name,value] of Object.entries(vars))text=text.replaceAll(`{${name}}`,value);return text;}
 function translatedNode(key,tag='span'){const node=document.createElement(tag);node.setAttribute('data-i18n',key);node.textContent=t(key);return node;}
 function setStatus(key){document.getElementById('status').replaceChildren(translatedNode(key));}
-function setLanguage(language){if(!translations[language])return;currentLanguage=language;document.documentElement.lang=language;document.title=t('appTitle');document.querySelectorAll('[data-language-picker]').forEach(node=>node.value=language);document.querySelectorAll('[data-i18n]').forEach(node=>{node.textContent=t(node.getAttribute('data-i18n'));});document.querySelectorAll('[data-language-picker]').forEach(node=>node.setAttribute('aria-label',t('language')));document.querySelectorAll('[data-original-page]').forEach(node=>node.alt=t('originalAlt',{page:node.dataset.originalPage}));document.querySelectorAll('[data-preview-page]').forEach(node=>node.setAttribute('aria-label',t('previewAlt',{page:node.dataset.previewPage})));if(typeof updateTranslatedControls==='function')updateTranslatedControls();}
+function setLanguage(language){if(!translations[language])return;currentLanguage=language;document.documentElement.lang=language;document.title=t('appTitle');document.querySelectorAll('[data-language-picker]').forEach(node=>node.value=language);document.querySelectorAll('[data-i18n]').forEach(node=>{node.textContent=t(node.getAttribute('data-i18n'));});document.querySelectorAll('[data-i18n-title]').forEach(node=>node.title=t(node.getAttribute('data-i18n-title')));document.querySelectorAll('[data-language-picker]').forEach(node=>node.setAttribute('aria-label',t('language')));document.querySelectorAll('[data-original-page]').forEach(node=>node.alt=t('originalAlt',{page:node.dataset.originalPage}));document.querySelectorAll('[data-preview-page]').forEach(node=>node.setAttribute('aria-label',t('previewAlt',{page:node.dataset.previewPage})));if(typeof updateTranslatedControls==='function')updateTranslatedControls();}
 document.querySelectorAll('[data-language-picker]').forEach(node=>node.addEventListener('change',event=>setLanguage(event.target.value)));
