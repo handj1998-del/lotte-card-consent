@@ -45,3 +45,6 @@ body.view-entry .entry-actions button{min-height:58px;font-size:18px}
 body.view-entry .card-format-status{font-size:17px}
 @media(max-width:699px){body.view-entry #entry .form-grid{grid-template-columns:minmax(0,1fr)}}
 .entry-heading{font-size:22px;margin:4px 0 10px;color:#173f72}#entryHeading:focus{outline:none}
+.phone-help{margin:2px 0 0;font-size:15px;font-weight:400;line-height:1.45;color:#3d4b5c}
+body.view-entry .phone-help{font-size:16px}
+html[lang="ko"] .phone-help{display:none}

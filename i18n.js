@@ -101,7 +101,8 @@ const translations={
     "cardFormatInvalid": "✕ 형식이 맞지 않습니다.",
     "cardFormatTyping": "입력 중… 카드번호를 끝까지 입력하세요.",
     "cardFormatNote": "(번호 형식만 확인하며, 실제 카드 인증이 아닙니다.)",
-    "entryHeading": "고객 정보 입력"
+    "entryHeading": "고객 정보 입력",
+    "phoneHelp": "국가번호 안내 (한국어 화면에서는 표시하지 않음)"
   },
   "en": {
     "appTitle": "Card information consent form",
@@ -203,7 +204,8 @@ const translations={
     "cardFormatInvalid": "✕ The format is not valid.",
     "cardFormatTyping": "Typing… please enter the full card number.",
     "cardFormatNote": "(This checks the number format only. It does not verify the card.)",
-    "entryHeading": "Enter your details"
+    "entryHeading": "Enter your details",
+    "phoneHelp": "Please include your country calling code."
   },
   "zh-CN": {
     "appTitle": "银行卡信息同意书",
@@ -305,7 +307,8 @@ const translations={
     "cardFormatInvalid": "✕ 格式不正确。",
     "cardFormatTyping": "正在输入… 请输入完整卡号。",
     "cardFormatNote": "（仅检查号码格式，并非实际验证银行卡。）",
-    "entryHeading": "填写您的信息"
+    "entryHeading": "填写您的信息",
+    "phoneHelp": "请输入包含国家/地区代码的电话号码。"
   },
   "zh-TW": {
     "appTitle": "卡片資料同意書",
@@ -407,7 +410,8 @@ const translations={
     "cardFormatInvalid": "✕ 格式不正確。",
     "cardFormatTyping": "輸入中… 請輸入完整卡號。",
     "cardFormatNote": "（僅檢查號碼格式，並非實際驗證卡片。）",
-    "entryHeading": "填寫您的資料"
+    "entryHeading": "填寫您的資料",
+    "phoneHelp": "請輸入包含國家／地區代碼的電話號碼。"
   },
   "ja": {
     "appTitle": "カード情報の取扱い同意書",
@@ -509,7 +513,8 @@ const translations={
     "cardFormatInvalid": "✕ 形式が正しくありません。",
     "cardFormatTyping": "入力中… カード番号を最後まで入力してください。",
     "cardFormatNote": "（番号の形式のみを確認しており、実際のカード認証ではありません。）",
-    "entryHeading": "お客様情報の入力"
+    "entryHeading": "お客様情報の入力",
+    "phoneHelp": "国番号を含めて電話番号を入力してください。"
   }
 };
 let currentLanguage='ko';
