@@ -1,0 +1,25 @@
+'use strict';
+// Static checks for the shared (server) reservation UI. No network.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const js=read('server-reservations.js'),html=read('index.html');
+assert(!/localStorage|sessionStorage|indexedDB|document\.cookie|console\.|Authorization|Bearer/.test(js),'no client-side token/secret storage or logging');
+assert(/credentials:'same-origin'/.test(js)&&!/https?:\/\//.test(js.replace(/\/\/.*$/gm,'')),'same-origin relative API only');
+assert(/body=\{no:f\.no\.value\.trim\(\),name:f\.name\.value\.trim\(\),phone:f\.phone\.value\.trim\(\),email:f\.email\.value\.trim\(\)\}/.test(js),'only 4 fields sent');
+assert(!/card|expiry|signature/i.test(js.replace(/^\/\/.*$/gm,'')),'no card/signature access');
+assert(/if\(x\.s!==200&&x\.s!==201\)\{msg\('srvNetErr'\);return;\}e\.target\.reset\(\);e\.target\.hidden=true;editing=null;await load\(false\);msg\('resSaved'\)/.test(js),'saved msg only after server commit');
+assert(/x\.s===409/.test(js)&&/version:editing\.version/.test(js)&&/\?version='\+r\.version/.test(js),'version conflict handling');
+assert(/if\(window\.consentStartCustomer\(copy\)\)await logout\(true\)/.test(js),'handoff then logout');
+assert(/const copy=\{no:rec\.no,name:rec\.name,phone:rec\.phone,email:rec\.email\}/.test(js),'only selected record handed off');
+assert(js.includes("window.addEventListener('pagehide',()=>logout(true))")&&/IDLE_MS=120000/.test(js));
+assert(/<button id="srvOpenBtn"[^>]*hidden/.test(html),'server entry hidden until same-origin API answers');
+for(const id of ['srvPass','srvNewPass','srvNewPass2','srvToken'])assert(new RegExp(`id="${id}"[^>]*type="password"`).test(html),id);
+assert(!/<li/.test(html.match(/<ul id="srvList"[^>]*>(.*?)<\/ul>/s)[1]));
+assert(/value="admin"/.test(html)&&!/id="srvNewPass"[^>]*value=/.test(html));
+assert(html.indexOf('reservations.js')<html.indexOf('server-reservations.js'));
+const src=read('i18n.js');const st=src.indexOf('const translations=')+19;const d=JSON.parse(src.slice(st,src.indexOf(';\nlet currentLanguage',st)));
+const keys=[...new Set([...html.matchAll(/data-i18n="(srv[A-Za-z]+)"/g),...js.matchAll(/msg\('(srv[A-Za-z]+)'/g)].map(m=>m[1]))];
+assert(keys.length>=15);
+for(const l of ['ko','en','zh-CN','zh-TW','ja']){for(const k of keys)assert(d[l][k],l+' '+k);assert(/Cloudflare/.test(d[l].srvStorageNote)&&/D1/.test(d[l].srvStorageNote),l+' truthful server note');}
+assert(/브라우저에만/.test(d.ko.resStorageNote),'local note unchanged');
+console.log('PASS: server UI same-origin cookie-only, 4 fields, commit-before-saved, 409/version, handoff+logout, hidden on Pages, password inputs, 5-language truthful notes');

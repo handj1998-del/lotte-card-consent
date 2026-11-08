@@ -29,7 +29,7 @@ if(typeof document!=='undefined')(function(){
   const $=id=>document.getElementById(id);let session=null,failures=0,lockUntil=0,idle=null,editingId=null;
   const IDLE_MS=120000;
   function setMsg(key,extra){const m=$('resMsg');m.textContent=key?t(key)+(extra||''):'';}
-  function stage(name){for(const id of ['resLocked','resSetup','resUnlock','resAdmin'])$(id).hidden=id!==name;}
+  function stage(name){for(const id of ['resLocked','resSetup','resUnlock','resAdmin','srvSetup','srvLogin','srvAdmin'])$(id).hidden=id!==name;}
   function lock(){session=null;editingId=null;clearTimeout(idle);$('resList').replaceChildren();$('resForm').reset();$('resForm').hidden=true;$('resPinForm').reset();$('resPinForm').hidden=true;for(const f of document.querySelectorAll('#resScreen input[type=password]'))f.value='';stage('resLocked');}
   function touch(){if(!session)return;clearTimeout(idle);idle=setTimeout(()=>{lock();setMsg('resAutoLocked');},IDLE_MS);}
   function renderList(){const list=$('resList');list.replaceChildren();if(!session.records.length){const p=document.createElement('li');p.className='res-empty';p.textContent=t('resEmpty');list.append(p);return;}
@@ -61,5 +61,6 @@ if(typeof document!=='undefined')(function(){
   window.addEventListener('pagehide',lock);document.addEventListener('visibilitychange',()=>{if(document.hidden)lock();});
   $('resBack').addEventListener('click',()=>{lock();setMsg('');window.consentShowView('reserve');});
   document.addEventListener('languagechange-consent',()=>{if(session)renderList();});
+  window.consentStartCustomer=startCustomer;window.consentResStage=stage;window.consentResMsg=setMsg;
   lock();
 })();
