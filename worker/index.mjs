@@ -95,15 +95,78 @@ async function newSession(env, now, status = 200) {
   return json(null, status, { ok: true, expiresAt: now + SESSION_MAX }, setCookie(token, SESSION_MAX / 1000));
 }
 const setupOpen = (env, now) => !!(env.SETUP_TOKEN && env.SETUP_TOKEN.length >= 32 && Number(env.SETUP_UNTIL) > now && Number(env.SETUP_UNTIL) <= now + 24 * 3600e3);
+// ---- Live PC review relay (Durable Object, SQLite class, no storage used) --------------------------------------------------
+// Tablet ("pub") and PC viewers ("sub") must both be signed in. The DO only forwards ECDH public keys and AES-GCM ciphertext
+// between them in memory; it never writes to storage and never sees form data, keys or signatures in plaintext.
+const RV_PUB_MS = 30 * 60e3, RV_SUB_MS = 2 * 3600e3, RV_MAX_SUBS = 3, RV_MAX_MSG = 900000, RV_RECHECK = 30e3;
+async function review(req, env, now, url, origin) {
+  if (origin !== url.origin) return json(req, 403, { error: 'origin' });
+  if ((req.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return json(req, 426, { error: 'upgrade' });
+  const role = url.searchParams.get('role'); if (role !== 'pub' && role !== 'sub') return json(req, 400, { error: 'role' });
+  if (!env.DB || !env.PEPPER || !env.RELAY) return json(req, 503, { error: 'not_configured' });
+  const th = await auth(req, env, now); if (!th) return json(req, 401, { error: 'auth' });
+  const fwd = new Request('https://relay/connect?role=' + role, { headers: { 'Upgrade': 'websocket', 'X-Session': th, 'X-Now': String(now) } });
+  return env.RELAY.get(env.RELAY.idFromName('main')).fetch(fwd);
+}
+const wsSend = (ws, m) => { try { ws.send(JSON.stringify(m)); } catch {} };
+export class Relay {
+  constructor(ctx, env) { this.ctx = ctx; this.env = env; }
+  subs() { return this.ctx.getWebSockets('sub'); }
+  pubs() { return this.ctx.getWebSockets('pub'); }
+  async fetch(req) {
+    const url = new URL(req.url), role = url.searchParams.get('role'), now = Number(req.headers.get('X-Now')) || Date.now();
+    if (role === 'sub' && this.subs().length >= RV_MAX_SUBS) return new Response('full', { status: 429 });
+    const [client, server] = Object.values(new WebSocketPair());
+    if (role === 'pub') for (const o of this.pubs()) { const a = o.deserializeAttachment() || {}; a.replaced = true; o.serializeAttachment(a); try { o.close(4001, 'replaced'); } catch {} }
+    const id = crypto.randomUUID();
+    this.ctx.acceptWebSocket(server, [role, id]);
+    server.serializeAttachment({ role, id, sess: req.headers.get('X-Session'), exp: now + (role === 'pub' ? RV_PUB_MS : RV_SUB_MS), checked: now });
+    if (role === 'pub') for (const v of this.subs()) wsSend(v, { t: 'pubup' });
+    else for (const p of this.pubs()) wsSend(p, { t: 'sub', id });
+    wsSend(server, { t: 'joined', role, id, pub: this.pubs().some(p => !(p.deserializeAttachment() || {}).replaced) });
+    return new Response(null, { status: 101, webSocket: client });
+  }
+  async alive(ws, a, now) {
+    if (now > a.exp) { try { ws.close(4002, 'expired'); } catch {} return false; }
+    if (now - a.checked > RV_RECHECK && this.env && this.env.DB) {
+      const s = await this.env.DB.prepare('SELECT expires_at FROM sessions WHERE token_hash = ?').bind(a.sess).first();
+      if (!s || s.expires_at <= now) { try { ws.close(4003, 'signed_out'); } catch {} return false; }
+      a.checked = now; ws.serializeAttachment(a);
+    }
+    return true;
+  }
+  async webSocketMessage(ws, msg, now = Date.now()) {
+    const a = ws.deserializeAttachment(); if (!a) { try { ws.close(1008, 'state'); } catch {} return; }
+    if (typeof msg !== 'string' || msg.length > RV_MAX_MSG) { try { ws.close(1009, 'too_big'); } catch {} return; }
+    if (!(await this.alive(ws, a, now))) return;
+    let m; try { m = JSON.parse(msg); } catch { return; }
+    if (!m || typeof m !== 'object') return;
+    if (a.role === 'sub') { if (m.t === 'hello' && m.pub && typeof m.pub === 'object') for (const p of this.pubs()) if (!(p.deserializeAttachment() || {}).replaced) wsSend(p, { t: 'hello', from: a.id, pub: m.pub }); return; }
+    if (a.replaced) return;
+    if (m.t === 'end') { for (const v of this.subs()) wsSend(v, { t: 'end' }); try { ws.close(1000, 'end'); } catch {} return; }
+    if ((m.t === 'key' || m.t === 'data') && typeof m.to === 'string') {
+      for (const v of this.ctx.getWebSockets(m.to)) { const va = v.deserializeAttachment(); if (va && va.role === 'sub' && await this.alive(v, va, now)) wsSend(v, m.t === 'key' ? { t: 'key', pub: m.pub } : { t: 'data', iv: m.iv, ct: m.ct }); }
+    }
+  }
+  async webSocketClose(ws) {
+    const a = ws.deserializeAttachment() || {};
+    if (a.role === 'pub' && !a.replaced && !this.pubs().some(p => p !== ws && !(p.deserializeAttachment() || {}).replaced)) for (const v of this.subs()) wsSend(v, { t: 'gone' });
+    if (a.role === 'sub') for (const p of this.pubs()) wsSend(p, { t: 'subgone', id: a.id });
+    try { ws.close(1000, 'bye'); } catch {}
+  }
+  async webSocketError(ws) { return this.webSocketClose(ws); }
+}
+
 export async function handle(req, env, now = Date.now()) {
   const res = await inner(req, env, now); const tok = renewals.get(req);
-  if (tok && res.status < 400 && !res.headers.has('Set-Cookie')) res.headers.set('Set-Cookie', setCookie(tok, SESSION_MAX / 1000)['Set-Cookie']);
+  if (tok && res.status !== 101 && res.status < 400 && !res.headers.has('Set-Cookie')) res.headers.set('Set-Cookie', setCookie(tok, SESSION_MAX / 1000)['Set-Cookie']);
   return res;
 }
 async function inner(req, env, now) {
   const url = new URL(req.url); const p = url.pathname;
   if (!p.startsWith('/api/')) return proxy(req, url);
   const origin = req.headers.get('Origin');
+  if (p === '/api/review') return review(req, env, now, url, origin);
   if (origin && origin !== url.origin) return json(req, 403, { error: 'origin' });
   if (req.method !== 'GET' && (origin !== url.origin || req.headers.get('X-Requested-With') !== 'consent')) return json(req, 403, { error: 'csrf' });
   if (!env.DB || !env.PEPPER || env.PEPPER.length < 32) return json(req, 503, { error: 'not_configured' });

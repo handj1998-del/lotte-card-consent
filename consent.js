@@ -1,5 +1,6 @@
 'use strict';
-// No form values leave this page. No storage, network submission, or analytics.
+// No form values leave this page unless staff explicitly start 'PC 확인 공유' (review.js: encrypted, live only, never stored).
+// No storage, network submission, or analytics.
 const W=725,H=1024;
 const fields=[],choices=[],signatures=[];
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}

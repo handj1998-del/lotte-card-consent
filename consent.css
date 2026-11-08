@@ -103,3 +103,12 @@ body:not(.view-reserve) #resScreen{display:none}
 .header-actions #preview,.header-actions #save,#savePreview,#backPreview,#closePreview,#previewEntry{font-size:18px;min-height:58px;padding:12px 22px;font-weight:600}
 .header-actions #save,#savePreview{background:var(--accent);border-color:var(--accent);color:#fff}
 .header-actions #preview{background:#fff;color:var(--accent);border-color:var(--accent)}
+
+/* PC review sharing */
+.review-share{margin:10px 0}.review-share button{font-size:18px;min-height:58px;padding:12px 22px;font-weight:600;background:#fff;color:var(--accent);border:2px solid var(--accent)}
+.review-share button.active{background:var(--accent);color:#fff}.review-status:empty{display:none}.review-status{font-weight:600;color:var(--accent);margin:6px 0}
+.review-dialog{width:min(98vw,1100px);max-height:96vh}.rv-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.rv-head button{font-size:18px;min-height:58px;padding:12px 22px}
+.rv-state{font-weight:700;padding:8px 12px;border-radius:6px;background:#f3f3f3}.rv-state[data-state=rvConnected]{background:#e7f6ec;color:#11622f}.rv-state[data-state=rvDisconnected],.rv-state[data-state=rvEnded]{background:#fdeaea;color:var(--accent)}
+.rv-checks{display:flex;flex-wrap:wrap;gap:8px;padding:0;list-style:none}.rv-checks li{padding:6px 10px;border-radius:6px;background:#e7f6ec}.rv-checks li[data-state=invalid],.rv-checks li[data-state=false],.rv-checks li[data-state=empty]{background:#fdeaea}
+.rv-table{width:100%;border-collapse:collapse;font-size:18px}.rv-table th,.rv-table td{border-bottom:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}.rv-table th{width:34%;color:#555;font-weight:600}.rv-card{font-family:ui-monospace,monospace;font-size:22px;letter-spacing:1px}
+.rv-sigs{display:flex;flex-wrap:wrap;gap:12px}.rv-sigs figure{margin:0;border:1px solid #ddd;padding:6px}.rv-sigs img{max-width:320px;height:auto;display:block}.rv-pages canvas{width:100%;height:auto;display:block;margin:12px 0;border:1px solid #ddd}

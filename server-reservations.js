@@ -14,7 +14,7 @@ if(typeof document!=='undefined')(function(){
   async function api(method,path,body){const o={method,credentials:'same-origin',cache:'no-store',headers:{'X-Requested-With':'consent'}};if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body);}
     const r=await fetch(path,o);let j=null;try{j=await r.json();}catch{}return{s:r.status,j:j||{}};}
   function wipe(){on=false;items=[];next=null;editing=null;$('srvList').replaceChildren();$('srvForm').reset();$('srvForm').hidden=true;$('srvMore').hidden=true;for(const id of ['srvPass','srvNewPass','srvNewPass2','srvToken','srvCurPw','srvNewPw','srvNewPw2'])$(id).value='';$('srvPwForm').hidden=true;}
-  async function logout(quiet){const was=on;wipe();if(was)try{await fetch('api/logout',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'X-Requested-With':'consent'}});}catch{}if(!quiet){stage('resLocked');msg('srvLoggedOut');}}
+  async function logout(quiet){if(window.consentReviewStop)window.consentReviewStop();if(window.consentReviewClose)window.consentReviewClose();const was=on;wipe();if(was)try{await fetch('api/logout',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'X-Requested-With':'consent'}});}catch{}if(!quiet){stage('resLocked');msg('srvLoggedOut');}}
   // Stays signed in until deliberate logout (no idle/tab/handoff logout, by owner choice).
   function touch(){}
   function expired(){wipe();stage('srvLogin');msg('srvExpired');}
