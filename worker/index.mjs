@@ -43,7 +43,11 @@ async function proxy(req, url) {
   if (url.pathname.includes('..') || url.pathname.startsWith('/worker/') || url.pathname.startsWith('/tests/') || url.pathname.startsWith('/.')) return new Response('Not found', { status: 404, headers: SEC });
   const up = await fetch(UPSTREAM + url.pathname + url.search, { method: req.method, cf: { cacheTtl: 300, cacheEverything: true } });
   const h = new Headers(SEC); for (const k of ['Content-Type', 'Content-Length', 'ETag', 'Last-Modified']) if (up.headers.get(k)) h.set(k, up.headers.get(k));
-  h.set('Cache-Control', /text\/html/.test(up.headers.get('Content-Type') || '') ? 'no-cache' : 'public, max-age=300');
+  // HTML is always revalidated. A successful static file requested with an explicit ?v= tag is immutable: every caller bumps
+  // the tag when the content changes. Unversioned paths (sw.js, original.pdf, docs) keep the short 5-minute cache. /api/* never comes here.
+  const isHtml = /text\/html/.test(up.headers.get('Content-Type') || '');
+  const versioned = up.status === 200 && !isHtml && url.searchParams.has('v') && /\.(?:js|css|png|woff2|ttf)$/.test(url.pathname);
+  h.set('Cache-Control', isHtml ? 'no-cache' : versioned ? 'public, max-age=31536000, immutable' : 'public, max-age=300');
   return new Response(up.body, { status: up.status, headers: h });
 }
 const FIELDS = { no: 40, name: 80, phone: 40, email: 120 };
