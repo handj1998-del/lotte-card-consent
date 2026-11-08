@@ -98,3 +98,8 @@ body:not(.view-reserve) #resScreen{display:none}
 .res-label{font-size:18px;font-weight:600;overflow-wrap:anywhere}
 .res-empty{color:var(--muted);font-size:16px}
 @media(max-width:699px){.res-item{grid-template-columns:1fr 1fr 1fr}.res-label{grid-column:1/-1}}
+
+/* Document view + download: large tablet buttons */
+.header-actions #preview,.header-actions #save,#savePreview,#backPreview,#closePreview,#previewEntry{font-size:18px;min-height:58px;padding:12px 22px;font-weight:600}
+.header-actions #save,#savePreview{background:var(--accent);border-color:var(--accent);color:#fff}
+.header-actions #preview{background:#fff;color:var(--accent);border-color:var(--accent)}
