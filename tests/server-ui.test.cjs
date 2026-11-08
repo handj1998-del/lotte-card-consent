@@ -9,9 +9,9 @@ assert(/body=\{no:f\.no\.value\.trim\(\),name:f\.name\.value\.trim\(\),phone:f\.
 assert(!/card|expiry|signature/i.test(js.replace(/^\/\/.*$/gm,'')),'no card/signature access');
 assert(/if\(x\.s!==200&&x\.s!==201\)\{msg\('srvNetErr'\);return;\}e\.target\.reset\(\);e\.target\.hidden=true;editing=null;await load\(false\);msg\('resSaved'\)/.test(js),'saved msg only after server commit');
 assert(/x\.s===409/.test(js)&&/version:editing\.version/.test(js)&&/\?version='\+r\.version/.test(js),'version conflict handling');
-assert(/if\(window\.consentStartCustomer\(copy\)\)await logout\(true\)/.test(js),'handoff then logout');
+assert(js.includes("if(window.consentStartCustomer(copy)){on=false;$('srvList').replaceChildren();items=[];}")&&!/consentStartCustomer\(copy\)\)await logout/.test(js),'handoff keeps session, clears list DOM');
 assert(/const copy=\{no:rec\.no,name:rec\.name,phone:rec\.phone,email:rec\.email\}/.test(js),'only selected record handed off');
-assert(js.includes("window.addEventListener('pagehide',()=>logout(true))")&&/IDLE_MS=120000/.test(js));
+assert(!/pagehide|visibilitychange|IDLE_MS|setTimeout\(\(\)=>\{logout/.test(js),'no idle/tab/pagehide logout');assert(/if\(j\.configured\)restore\(\)/.test(js)&&js.includes("api('GET','api/session')")&&js.includes("$('resBack').addEventListener('click',()=>setTimeout(restore,0))"),'restore on load/back');assert(js.includes("$('srvLogout').addEventListener('click',()=>logout(false))"));
 assert(/<button id="srvOpenBtn"[^>]*hidden/.test(html),'server entry hidden until same-origin API answers');
 for(const id of ['srvPass','srvNewPass','srvNewPass2','srvToken'])assert(new RegExp(`id="${id}"[^>]*type="password"`).test(html),id);
 assert(!/<li/.test(html.match(/<ul id="srvList"[^>]*>(.*?)<\/ul>/s)[1]));
@@ -27,4 +27,5 @@ for(const id of ['srvCurPw','srvNewPw','srvNewPw2'])assert(new RegExp(`id="${id}
 assert(/id="srvChangePwBtn"/.test(html)&&!/minlength="12"/.test(html)&&/a\.length<4\|\|a\.length>128/.test(js),'4-128 rule, change UI');
 assert(js.includes("api('POST','api/password',{current:await ConsentKdf.derive(u,c),next:await ConsentKdf.derive(u,a)})")&&js.includes("if(x.s===200){wipe();stage('srvLogin');msg('srvPwChanged')"),'change -> relogin');
 assert(js.includes("normalize('NFC').trim().toLowerCase()")&&/id="srvUserRuleNote"/.test(html));for(const l of ['ko','en','zh-CN','zh-TW','ja'])assert(/2.32/.test(d[l].srvUserRule),l);
-console.log('PASS: korean username rule, password change UI, server UI same-origin cookie-only, 4 fields, commit-before-saved, 409/version, handoff+logout, hidden on Pages, password inputs, 5-language truthful notes');
+for(const l of ['ko','en','zh-CN','zh-TW','ja'])assert(!/2\s*(분|min|分钟|分鐘|分)/.test(d[l].srvStorageNote),l);
+console.log('PASS: persistent session, korean username rule, password change UI, server UI same-origin cookie-only, 4 fields, commit-before-saved, 409/version, handoff+logout, hidden on Pages, password inputs, 5-language truthful notes');

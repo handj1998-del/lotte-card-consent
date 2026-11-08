@@ -64,7 +64,10 @@ assert.equal((await call('GET','/api/reservations/'+id,{token:tab})).s,404);
 for(let i=0;i<120;i++){t+=1;await call('POST','/api/reservations',{token:pc,body:{no:'TEST-'+i,name:'TEST USER '+i},now:t});}
 let seen=0,cur=null,pages=0;do{r=await call('GET','/api/reservations?limit=50'+(cur?'&cursor='+encodeURIComponent(cur):''),{token:tab,now:t});seen+=r.j.items.length;cur=r.j.next;pages++;}while(cur);assert.equal(seen,121);assert.equal(pages,3);
 // session expiry & logout
-assert.equal((await call('GET','/api/reservations',{token:pc,now:t+31*60e3})).s,401,'idle expiry');
+{const r1=await call('GET','/api/reservations',{token:pc,now:t+31*60e3});assert.equal(r1.s,200,'no idle expiry');
+ const r2=await call('GET','/api/reservations',{token:pc,now:t+30*86400e3});assert.equal(r2.s,200,'30 days later still signed in');assert.equal(r2.cookie,pc,'cookie renewed');assert.match(r2.h.get('Set-Cookie'),/Max-Age=34560000$/);
+ const row=env.DB.raw.prepare('SELECT expires_at FROM sessions').all().map(x=>x.expires_at);assert(row.includes(t+30*86400e3+400*86400e3),'sliding expiry');
+ assert.equal((await call('GET','/api/reservations',{token:pc,now:t+30*86400e3+401*86400e3})).s,401,'400-day ceiling without use');}
 {const lo=await call('POST','/api/logout',{token:tab,now:t});assert.equal(lo.s,200);assert.match(lo.h.get('Set-Cookie'),/Max-Age=0$/);}assert.equal((await call('GET','/api/reservations',{token:tab,now:t})).s,401,'logged out');
 // password change: wrong current -> no change; success -> fresh salt, ALL sessions revoked; short (4) passwords accepted
 {const s1=(await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'203.0.113.20',now:t})).cookie,s2=(await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'203.0.113.21',now:t})).cookie;

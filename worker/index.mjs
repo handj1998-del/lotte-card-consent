@@ -10,7 +10,10 @@ const UPSTREAM = 'https://handj1998-del.github.io/lotte-card-consent';
 // CLIENT_ITER PBKDF2 rounds per guess. Keep CLIENT_ITER in sync with server-reservations.js.
 const CLIENT_ITER = 600000;
 const COOKIE = '__Host-lcr_sid';
-const SESSION_IDLE = 30 * 60e3, SESSION_MAX = 12 * 3600e3;
+// Persistent sign-in (owner choice): no idle expiry; sliding 400-day lifetime (Chrome's cookie Max-Age ceiling), renewed at most
+// once a day on use. Ends only on deliberate logout (this session) or password change/account reset (all sessions).
+const SESSION_MAX = 400 * 86400e3, RENEW_AFTER = 86400e3;
+const renewals = new WeakMap();
 const MAX_FAILS = 5, WINDOW = 15 * 60e3, LOCK = 15 * 60e3, GLOBAL_MAX_FAILS = 20, GLOBAL_LOCK = 60 * 60e3; // short passwords allowed by owner choice -> tight global cap
 const enc = new TextEncoder();
 const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -80,8 +83,8 @@ async function auth(req, env, now) {
   const tok = cookieTok(req); if (!tok) return false;
   const th = await sha256(tok);
   const s = await env.DB.prepare('SELECT last_seen, expires_at FROM sessions WHERE token_hash = ?').bind(th).first();
-  if (!s || s.expires_at <= now || now - s.last_seen > SESSION_IDLE) { if (s) await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(th).run(); return false; }
-  await env.DB.prepare('UPDATE sessions SET last_seen = ? WHERE token_hash = ?').bind(now, th).run();
+  if (!s || s.expires_at <= now) { if (s) await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(th).run(); return false; }
+  if (now - s.last_seen > RENEW_AFTER) { await env.DB.prepare('UPDATE sessions SET last_seen = ?, expires_at = ? WHERE token_hash = ?').bind(now, now + SESSION_MAX, th).run(); renewals.set(req, tok); }
   return th;
 }
 const b64url = u => btoa(String.fromCharCode(...u)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -89,10 +92,15 @@ async function newSession(env, now, status = 200) {
   const token = b64url(rand(32));
   await env.DB.prepare('DELETE FROM sessions WHERE expires_at <= ?').bind(now).run();
   await env.DB.prepare('INSERT INTO sessions (token_hash, created_at, last_seen, expires_at) VALUES (?, ?, ?, ?)').bind(await sha256(token), now, now, now + SESSION_MAX).run();
-  return json(null, status, { ok: true, idleMs: SESSION_IDLE, expiresAt: now + SESSION_MAX }, setCookie(token, SESSION_MAX / 1000));
+  return json(null, status, { ok: true, expiresAt: now + SESSION_MAX }, setCookie(token, SESSION_MAX / 1000));
 }
 const setupOpen = (env, now) => !!(env.SETUP_TOKEN && env.SETUP_TOKEN.length >= 32 && Number(env.SETUP_UNTIL) > now && Number(env.SETUP_UNTIL) <= now + 24 * 3600e3);
 export async function handle(req, env, now = Date.now()) {
+  const res = await inner(req, env, now); const tok = renewals.get(req);
+  if (tok && res.status < 400 && !res.headers.has('Set-Cookie')) res.headers.set('Set-Cookie', setCookie(tok, SESSION_MAX / 1000)['Set-Cookie']);
+  return res;
+}
+async function inner(req, env, now) {
   const url = new URL(req.url); const p = url.pathname;
   if (!p.startsWith('/api/')) return proxy(req, url);
   const origin = req.headers.get('Origin');

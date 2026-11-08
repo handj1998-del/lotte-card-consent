@@ -16,8 +16,9 @@
   field and card-number-like values. Card data, expiry, signatures, PDFs are never sent.
 - Auth: one admin (`admin` by default). Username: NFC-normalised, 2–32 chars, only Hangul syllables U+AC00–U+D7A3, A–Z a–z 0–9 . _ - (no spaces, emoji, standalone jamo, other scripts). Password: PBKDF2-SHA256 100,000 iterations (Workers WebCrypto maximum), random salt,
   then HMAC-SHA256 with a server-only PEPPER secret. Session: random 256-bit token in a `__Host-` cookie (Secure, HttpOnly,
-  SameSite=Strict), stored server-side as SHA-256; 30 min idle / 12 h max; the UI also signs out after 2 min idle, page hide,
-  and after handing a record to the form. No CORS; writes require same Origin + `X-Requested-With`. All responses no-store.
+  SameSite=Strict), stored server-side as SHA-256; no idle timeout (owner choice): sliding 400-day lifetime renewed
+  daily on use (400 days = Chrome's cookie ceiling; clearing browser data or browser policy can end it sooner). Survives
+  refresh/tab close/restart; ends only on 로그아웃 (that session) or password change/account reset (all sessions). No CORS; writes require same Origin + `X-Requested-With`. All responses no-store.
 - Throttle (in D1): 5 failed logins per IP-hash / 15 min -> 15 min lock; 20 global failures / 15 min -> 1 h global lock (also applies to
   wrong current password on 비밀번호 변경). An attacker can therefore lock staff out for an hour at a time.
 - Bootstrap: closed unless BOTH `SETUP_TOKEN` (>=32 chars) and `SETUP_UNTIL` (<= 24 h ahead) Worker secrets exist and no admin

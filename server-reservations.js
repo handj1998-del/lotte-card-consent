@@ -9,13 +9,14 @@ const ConsentKdf={ITER:600000,async derive(username,password){const e=new TextEn
   return btoa(String.fromCharCode(...new Uint8Array(bits))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}};
 if(typeof module!=='undefined')module.exports={ConsentKdf};
 if(typeof document!=='undefined')(function(){
-  const $=id=>document.getElementById(id),IDLE_MS=120000;let on=false,idle=null,next=null,items=[],editing=null,busy=false;
+  const $=id=>document.getElementById(id);let on=false,next=null,items=[],editing=null,busy=false;
   const msg=(k,x)=>window.consentResMsg(k,x),stage=n=>window.consentResStage(n);
   async function api(method,path,body){const o={method,credentials:'same-origin',cache:'no-store',headers:{'X-Requested-With':'consent'}};if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body);}
     const r=await fetch(path,o);let j=null;try{j=await r.json();}catch{}return{s:r.status,j:j||{}};}
-  function wipe(){on=false;items=[];next=null;editing=null;clearTimeout(idle);$('srvList').replaceChildren();$('srvForm').reset();$('srvForm').hidden=true;$('srvMore').hidden=true;for(const id of ['srvPass','srvNewPass','srvNewPass2','srvToken','srvCurPw','srvNewPw','srvNewPw2'])$(id).value='';$('srvPwForm').hidden=true;}
+  function wipe(){on=false;items=[];next=null;editing=null;$('srvList').replaceChildren();$('srvForm').reset();$('srvForm').hidden=true;$('srvMore').hidden=true;for(const id of ['srvPass','srvNewPass','srvNewPass2','srvToken','srvCurPw','srvNewPw','srvNewPw2'])$(id).value='';$('srvPwForm').hidden=true;}
   async function logout(quiet){const was=on;wipe();if(was)try{await fetch('api/logout',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'X-Requested-With':'consent'}});}catch{}if(!quiet){stage('resLocked');msg('srvLoggedOut');}}
-  function touch(){if(!on)return;clearTimeout(idle);idle=setTimeout(()=>{logout(true);stage('resLocked');msg('resAutoLocked');},IDLE_MS);}
+  // Stays signed in until deliberate logout (no idle/tab/handoff logout, by owner choice).
+  function touch(){}
   function expired(){wipe();stage('srvLogin');msg('srvExpired');}
   function btn(key,cls,fn){const b=document.createElement('button');b.type='button';b.className=cls;b.setAttribute('data-i18n',key);b.textContent=t(key);b.addEventListener('click',()=>{touch();fn();});return b;}
   function render(){const list=$('srvList');list.replaceChildren();if(!items.length){const li=document.createElement('li');li.className='res-empty';li.setAttribute('data-i18n','resEmpty');li.textContent=t('resEmpty');list.append(li);}
@@ -24,7 +25,7 @@ if(typeof document!=='undefined')(function(){
   async function load(more){const q='api/reservations?limit=50'+(more&&next?'&cursor='+encodeURIComponent(next):'');let r;try{r=await api('GET',q);}catch{msg('srvNetErr');return false;}
     if(r.s===401){expired();return false;}if(r.s!==200){msg('srvNetErr');return false;}items=more?items.concat(r.j.items):r.j.items;next=r.j.next;render();return true;}
   async function full(r){let x;try{x=await api('GET','api/reservations/'+r.id);}catch{msg('srvNetErr');return null;}if(x.s===401){expired();return null;}if(x.s===404){msg('srvConflict');await load(false);return null;}if(x.s!==200){msg('srvNetErr');return null;}return x.j;}
-  async function select(r){const rec=await full(r);if(!rec)return;const copy={no:rec.no,name:rec.name,phone:rec.phone,email:rec.email};if(window.consentStartCustomer(copy))await logout(true);}
+  async function select(r){const rec=await full(r);if(!rec)return;const copy={no:rec.no,name:rec.name,phone:rec.phone,email:rec.email};if(window.consentStartCustomer(copy)){on=false;$('srvList').replaceChildren();items=[];}}
   async function edit(r){const rec=await full(r);if(!rec)return;editing={id:rec.id,version:rec.version};const f=$('srvForm');f.hidden=false;for(const k of ['no','name','phone','email'])f.elements[k].value=rec[k];f.elements.no.focus();}
   async function remove(r){if(!confirm(t('resDeleteConfirm')))return;let x;try{x=await api('DELETE','api/reservations/'+r.id+'?version='+r.version);}catch{msg('srvNetErr');return;}
     if(x.s===401)return expired();if(x.s===409||x.s===404){msg('srvConflict');await load(false);return;}if(x.s!==200){msg('srvNetErr');return;}await load(false);msg('resDeleted');}
@@ -53,10 +54,12 @@ if(typeof document!=='undefined')(function(){
   $('srvOpenBtn').addEventListener('click',async()=>{msg('');let x;try{x=await api('GET','api/status');}catch{msg('srvNetErr');return;}if(x.s!==200){msg('srvNotReady');return;}
     if(x.j.configured){try{const s=await api('GET','api/session');if(s.s===200)return enter();}catch{}stage('srvLogin');$('srvPass').focus();}else if(x.j.setupOpen){stage('srvSetup');$('srvToken').focus();}else msg('srvNotReady');});
   $('resScreen').addEventListener('input',touch);
-  window.addEventListener('pagehide',()=>logout(true));document.addEventListener('visibilitychange',()=>{if(document.hidden&&on){logout(true);stage('resLocked');}});
+  // Restore a still-valid server session whenever the reservation screen is shown (page load/refresh, back from the form).
+  async function restore(){if(on||!$('resLocked')||$('resLocked').hidden)return;try{const s=await api('GET','api/session');if(s.s===200&&!on&&!$('resLocked').hidden)await enter();}catch{}}
+  $('resBack').addEventListener('click',()=>setTimeout(restore,0));
   document.addEventListener('languagechange-consent',()=>{if(on)render();});
   // On the Worker origin the separate same-device (PIN) vault is hidden: browser storage is per-origin, so tablet records
   // stay on the GitHub Pages address untouched and are not mixed with the shared server list.
   // Show the entry point only when this origin really hosts the API (GitHub Pages has no /api -> stays hidden, local mode unchanged).
-  fetch('api/status',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok&&/json/.test(r.headers.get('Content-Type')||'')?r.json():null).then(j=>{if(j&&typeof j.configured==='boolean'){$('srvOpenBtn').hidden=false;$('resAdminBtn').hidden=true;}}).catch(()=>{});
+  fetch('api/status',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok&&/json/.test(r.headers.get('Content-Type')||'')?r.json():null).then(j=>{if(j&&typeof j.configured==='boolean'){$('srvOpenBtn').hidden=false;$('resAdminBtn').hidden=true;if(j.configured)restore();}}).catch(()=>{});
 })();
