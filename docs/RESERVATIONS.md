@@ -18,7 +18,8 @@
   then HMAC-SHA256 with a server-only PEPPER secret. Session: random 256-bit token in a `__Host-` cookie (Secure, HttpOnly,
   SameSite=Strict), stored server-side as SHA-256; 30 min idle / 12 h max; the UI also signs out after 2 min idle, page hide,
   and after handing a record to the form. No CORS; writes require same Origin + `X-Requested-With`. All responses no-store.
-- Throttle (in D1): 5 failed logins per IP-hash / 15 min -> 15 min lock; 50 global failures -> lock.
+- Throttle (in D1): 5 failed logins per IP-hash / 15 min -> 15 min lock; 20 global failures / 15 min -> 1 h global lock (also applies to
+  wrong current password on 비밀번호 변경). An attacker can therefore lock staff out for an hour at a time.
 - Bootstrap: closed unless BOTH `SETUP_TOKEN` (>=32 chars) and `SETUP_UNTIL` (<= 24 h ahead) Worker secrets exist and no admin
   exists. Never a first-visitor claim.
 - Edits carry `version`; a stale edit/delete returns 409 and the list reloads. Lists are masked, paged 50 at a time.

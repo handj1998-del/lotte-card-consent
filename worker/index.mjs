@@ -11,7 +11,7 @@ const UPSTREAM = 'https://handj1998-del.github.io/lotte-card-consent';
 const CLIENT_ITER = 600000;
 const COOKIE = '__Host-lcr_sid';
 const SESSION_IDLE = 30 * 60e3, SESSION_MAX = 12 * 3600e3;
-const MAX_FAILS = 5, WINDOW = 15 * 60e3, LOCK = 15 * 60e3, GLOBAL_MAX_FAILS = 50;
+const MAX_FAILS = 5, WINDOW = 15 * 60e3, LOCK = 15 * 60e3, GLOBAL_MAX_FAILS = 20, GLOBAL_LOCK = 60 * 60e3; // short passwords allowed by owner choice -> tight global cap
 const enc = new TextEncoder();
 const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
 const unhex = s => Uint8Array.from(s.match(/../g).map(h => parseInt(h, 16)));
@@ -67,10 +67,10 @@ async function throttleCheck(db, key, now) {
   const r = await db.prepare('SELECT fails, window_start, locked_until FROM throttle WHERE key = ?').bind(key).first();
   return r && r.locked_until > now ? r.locked_until : 0;
 }
-async function throttleFail(db, key, now, max) {
+async function throttleFail(db, key, now, max, lockMs = LOCK) {
   const r = await db.prepare('SELECT fails, window_start FROM throttle WHERE key = ?').bind(key).first();
   let fails = 1, ws = now; if (r && now - r.window_start < WINDOW) { fails = r.fails + 1; ws = r.window_start; }
-  const locked = fails >= max ? now + LOCK : 0;
+  const locked = fails >= max ? now + lockMs : 0;
   await db.prepare('INSERT INTO throttle (key, fails, window_start, locked_until) VALUES (?, ?, ?, ?) ON CONFLICT(key) DO UPDATE SET fails = excluded.fails, window_start = excluded.window_start, locked_until = excluded.locked_until').bind(key, fails, ws, locked).run();
 }
 async function auth(req, env, now) {
@@ -121,13 +121,27 @@ export async function handle(req, env, now = Date.now()) {
     if (locked) return json(req, 429, { error: 'locked', retryAt: locked });
     const b = await readJson(req); if (!b) return json(req, 400, { error: 'body' });
     const ok = same(String(b.username || ''), admin.username) & same(KEY_RE.test(String(b.key || '')) ? await hashKey(String(b.key), admin.salt, env.PEPPER) : '', admin.hash);
-    if (!ok) { await throttleFail(db, ipKey, now, MAX_FAILS); await throttleFail(db, 'global', now, GLOBAL_MAX_FAILS); return json(req, 401, { error: 'bad_credentials' }); }
+    if (!ok) { await throttleFail(db, ipKey, now, MAX_FAILS); await throttleFail(db, 'global', now, GLOBAL_MAX_FAILS, GLOBAL_LOCK); return json(req, 401, { error: 'bad_credentials' }); }
     await db.prepare('DELETE FROM throttle WHERE key = ?').bind(ipKey).run();
     return newSession(env, now);
   }
   const th = await auth(req, env, now); if (!th) return json(req, 401, { error: 'auth' }, cookieTok(req) ? clearCookie() : {});
   if (p === '/api/logout' && req.method === 'POST') { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(th).run(); return json(req, 200, { ok: true }, clearCookie()); }
-  if (p === '/api/session' && req.method === 'GET') return json(req, 200, { ok: true });
+  if (p === '/api/password' && req.method === 'POST') {
+    const ipKey = 'ip:' + await sha256(req.headers.get('CF-Connecting-IP') || 'unknown');
+    const locked = Math.max(await throttleCheck(db, ipKey, now), await throttleCheck(db, 'global', now));
+    if (locked) return json(req, 429, { error: 'locked', retryAt: locked });
+    const b = await readJson(req); if (!b) return json(req, 400, { error: 'body' });
+    const cur = String(b.current || ''), nk = String(b.next || '');
+    if (!KEY_RE.test(nk)) return json(req, 400, { error: 'key' });
+    if (!(KEY_RE.test(cur) && same(await hashKey(cur, admin.salt, env.PEPPER), admin.hash))) { await throttleFail(db, ipKey, now, MAX_FAILS); await throttleFail(db, 'global', now, GLOBAL_MAX_FAILS, GLOBAL_LOCK); return json(req, 401, { error: 'bad_current' }); }
+    const salt = hex(rand(16));
+    const r = await db.prepare('UPDATE admin SET salt = ?, hash = ? WHERE id = 1 AND hash = ?').bind(salt, await hashKey(nk, salt, env.PEPPER), admin.hash).run();
+    if (!r.meta || r.meta.changes !== 1) return json(req, 409, { error: 'conflict' });
+    await db.prepare('DELETE FROM sessions').run();
+    return json(req, 200, { ok: true, relogin: true }, clearCookie());
+  }
+  if (p === '/api/session' && req.method === 'GET') return json(req, 200, { ok: true, username: admin.username });
   if (p === '/api/reservations' && req.method === 'GET') {
     const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50));
     const c = url.searchParams.get('cursor'); let rows;

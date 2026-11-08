@@ -23,4 +23,8 @@ assert(keys.length>=15);
 for(const l of ['ko','en','zh-CN','zh-TW','ja']){for(const k of keys)assert(d[l][k],l+' '+k);assert(/Cloudflare/.test(d[l].srvStorageNote)&&/D1/.test(d[l].srvStorageNote),l+' truthful server note');}
 assert(/브라우저에만/.test(d.ko.resStorageNote),'local note unchanged');
 assert(!/password:/.test(js)&&js.includes('key:await ConsentKdf.derive(u,p)')&&/ITER:600000/.test(js),'raw password never sent');assert(read('worker/index.mjs').includes('const CLIENT_ITER = 600000;'),'kdf in sync');assert(js.includes("$('resAdminBtn').hidden=true"));
-console.log('PASS: server UI same-origin cookie-only, 4 fields, commit-before-saved, 409/version, handoff+logout, hidden on Pages, password inputs, 5-language truthful notes');
+for(const id of ['srvCurPw','srvNewPw','srvNewPw2'])assert(new RegExp(`id="${id}"[^>]*type="password"`).test(html),id);
+assert(/id="srvChangePwBtn"/.test(html)&&!/minlength="12"/.test(html)&&/a\.length<4\|\|a\.length>128/.test(js),'4-128 rule, change UI');
+assert(js.includes("api('POST','api/password',{current:await ConsentKdf.derive(u,c),next:await ConsentKdf.derive(u,a)})")&&js.includes("if(x.s===200){wipe();stage('srvLogin');msg('srvPwChanged')"),'change -> relogin');
+assert(!/8000/.test(js+html+read('i18n.js')+read('worker/index.mjs')+read('docs/RESERVATIONS.md')),'no initial password constant anywhere');
+console.log('PASS: password change UI, server UI same-origin cookie-only, 4 fields, commit-before-saved, 409/version, handoff+logout, hidden on Pages, password inputs, 5-language truthful notes');

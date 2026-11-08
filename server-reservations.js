@@ -13,7 +13,7 @@ if(typeof document!=='undefined')(function(){
   const msg=(k,x)=>window.consentResMsg(k,x),stage=n=>window.consentResStage(n);
   async function api(method,path,body){const o={method,credentials:'same-origin',cache:'no-store',headers:{'X-Requested-With':'consent'}};if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body);}
     const r=await fetch(path,o);let j=null;try{j=await r.json();}catch{}return{s:r.status,j:j||{}};}
-  function wipe(){on=false;items=[];next=null;editing=null;clearTimeout(idle);$('srvList').replaceChildren();$('srvForm').reset();$('srvForm').hidden=true;$('srvMore').hidden=true;for(const id of ['srvPass','srvNewPass','srvNewPass2','srvToken'])$(id).value='';}
+  function wipe(){on=false;items=[];next=null;editing=null;clearTimeout(idle);$('srvList').replaceChildren();$('srvForm').reset();$('srvForm').hidden=true;$('srvMore').hidden=true;for(const id of ['srvPass','srvNewPass','srvNewPass2','srvToken','srvCurPw','srvNewPw','srvNewPw2'])$(id).value='';$('srvPwForm').hidden=true;}
   async function logout(quiet){const was=on;wipe();if(was)try{await fetch('api/logout',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'X-Requested-With':'consent'}});}catch{}if(!quiet){stage('resLocked');msg('srvLoggedOut');}}
   function touch(){if(!on)return;clearTimeout(idle);idle=setTimeout(()=>{logout(true);stage('resLocked');msg('resAutoLocked');},IDLE_MS);}
   function expired(){wipe();stage('srvLogin');msg('srvExpired');}
@@ -37,12 +37,18 @@ if(typeof document!=='undefined')(function(){
   $('srvRefresh').addEventListener('click',async()=>{touch();if(await load(false))msg('');});
   $('srvMore').addEventListener('click',()=>{touch();load(true);});
   $('srvLogout').addEventListener('click',()=>logout(false));
+  $('srvChangePwBtn').addEventListener('click',()=>{touch();$('srvPwForm').hidden=false;$('srvCurPw').focus();});
+  $('srvPwCancel').addEventListener('click',()=>{for(const id of ['srvCurPw','srvNewPw','srvNewPw2'])$(id).value='';$('srvPwForm').hidden=true;});
+  $('srvPwForm').addEventListener('submit',async e=>{e.preventDefault();touch();if(busy)return;const c=$('srvCurPw').value,a=$('srvNewPw').value,b=$('srvNewPw2').value;for(const id of ['srvCurPw','srvNewPw','srvNewPw2'])$(id).value='';
+    if(a.length<4||a.length>128){msg('srvPassRule');return;}if(a!==b){msg('srvMismatch');return;}busy=true;let x;
+    try{const ss=await api('GET','api/session');if(ss.s!==200){busy=false;return expired();}const u=ss.j.username;x=await api('POST','api/password',{current:await ConsentKdf.derive(u,c),next:await ConsentKdf.derive(u,a)});}catch{x=null;}finally{busy=false;}
+    if(!x){msg('srvNetErr');return;}if(x.s===200){wipe();stage('srvLogin');msg('srvPwChanged');return;}if(x.s===401&&x.j.error==='auth')return expired();msg(x.s===429?'srvLocked':x.s===401?'srvBadCurrent':'srvNetErr');});
   for(const b of document.querySelectorAll('.srv-cancel'))b.addEventListener('click',()=>{wipe();stage('resLocked');msg('');});
   async function enter(){on=true;stage('srvAdmin');msg('');touch();await load(false);}
   $('srvLogin').addEventListener('submit',async e=>{e.preventDefault();const u=$('srvUser').value.trim(),p=$('srvPass').value;$('srvPass').value='';let x;try{x=await api('POST','api/login',{username:u,key:await ConsentKdf.derive(u,p)});}catch{msg('srvNetErr');return;}
     if(x.s===200)return enter();msg(x.s===429?'srvLocked':x.s===401?'srvBadLogin':'srvNetErr');});
   $('srvSetupForm').addEventListener('submit',async e=>{e.preventDefault();const tok=$('srvToken').value.trim(),u=$('srvNewUser').value.trim(),a=$('srvNewPass').value,b=$('srvNewPass2').value;$('srvNewPass').value=$('srvNewPass2').value='';
-    if(a.length<12||a.length>128){msg('srvPassRule');return;}if(a!==b){msg('srvMismatch');return;}let x;try{x=await api('POST','api/setup',{token:tok,username:u,key:await ConsentKdf.derive(u,a)});}catch{msg('srvNetErr');return;}$('srvToken').value='';
+    if(a.length<4||a.length>128){msg('srvPassRule');return;}if(a!==b){msg('srvMismatch');return;}let x;try{x=await api('POST','api/setup',{token:tok,username:u,key:await ConsentKdf.derive(u,a)});}catch{msg('srvNetErr');return;}$('srvToken').value='';
     if(x.s===201)return enter();msg(x.s===429?'srvLocked':x.s===400?'srvPassRule':'srvSetupBad');});
   $('srvOpenBtn').addEventListener('click',async()=>{msg('');let x;try{x=await api('GET','api/status');}catch{msg('srvNetErr');return;}if(x.s!==200){msg('srvNotReady');return;}
     if(x.j.configured){try{const s=await api('GET','api/session');if(s.s===200)return enter();}catch{}stage('srvLogin');$('srvPass').focus();}else if(x.j.setupOpen){stage('srvSetup');$('srvToken').focus();}else msg('srvNotReady');});

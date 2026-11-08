@@ -46,7 +46,7 @@ assert.equal((await call('PUT','/api/reservations/00000000-0000-4000-8000-000000
 assert.notEqual(pc,tab);
 const rec={no:'TEST-RES-0001',name:'TEST USER',phone:'+1 555 0100',email:'test.user@example.invalid'};
 r=await call('POST','/api/reservations',{token:pc,body:rec});assert.equal(r.s,201);const id=r.j.id;
-r=await call('GET','/api/reservations',{token:tab});assert.equal(r.s,200);assert.equal(r.j.items.length,1);assert.equal(r.j.items[0].label,'TE••••••••001 · T•••••••R');assert(!JSON.stringify(r.j).includes('555')&&!JSON.stringify(r.j).includes('example.invalid'),'list masked');
+r=await call('GET','/api/reservations',{token:tab});assert.equal(r.s,200);assert.equal(r.j.items.length,1);assert.equal(r.j.items[0].label,'TE••••••••001 · T•••••••R');{const vis=JSON.stringify(r.j.items.map(({id,...x})=>x));assert(!vis.includes('555')&&!vis.includes('example.invalid')&&!vis.includes('TEST USER'),'list masked');}
 r=await call('GET','/api/reservations/'+id,{token:tab});assert.deepEqual({no:r.j.no,name:r.j.name,phone:r.j.phone,email:r.j.email},rec);
 // validation: card fields / card-like values / unknown keys rejected
 assert.equal((await call('POST','/api/reservations',{token:pc,body:{...rec,cardNumber:'4111111111111111'}})).j.error,'field:cardNumber');
@@ -66,6 +66,28 @@ let seen=0,cur=null,pages=0;do{r=await call('GET','/api/reservations?limit=50'+(
 // session expiry & logout
 assert.equal((await call('GET','/api/reservations',{token:pc,now:t+31*60e3})).s,401,'idle expiry');
 {const lo=await call('POST','/api/logout',{token:tab,now:t});assert.equal(lo.s,200);assert.match(lo.h.get('Set-Cookie'),/Max-Age=0$/);}assert.equal((await call('GET','/api/reservations',{token:tab,now:t})).s,401,'logged out');
+// password change: wrong current -> no change; success -> fresh salt, ALL sessions revoked; short (4) passwords accepted
+{const s1=(await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'203.0.113.20',now:t})).cookie,s2=(await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'203.0.113.21',now:t})).cookie;
+ assert.equal((await call('GET','/api/session',{token:s1,now:t})).j.username,'admin');
+ const NEW=await ConsentKdf.derive('admin','4321');const before=env.DB.raw.prepare('SELECT salt,hash FROM admin').get();
+ assert.equal((await call('POST','/api/password',{body:{current:KEY,next:NEW},now:t})).s,401,'unauthenticated');
+ assert.equal((await call('POST','/api/password',{token:s1,body:{current:KEY,next:NEW},xrw:null,now:t})).s,403,'csrf');
+ assert.equal((await call('POST','/api/password',{token:s1,body:{current:BAD,next:NEW},ip:'203.0.113.20',now:t})).j.error,'bad_current');
+ assert.deepEqual(env.DB.raw.prepare('SELECT salt,hash FROM admin').get(),before,'wrong current: no change');
+ assert.equal((await call('POST','/api/password',{token:s1,body:{current:KEY,next:'x'},ip:'203.0.113.20',now:t})).j.error,'key');
+ const ch=await call('POST','/api/password',{token:s1,body:{current:KEY,next:NEW},ip:'203.0.113.20',now:t});assert.equal(ch.s,200);assert.match(ch.h.get('Set-Cookie'),/Max-Age=0$/);
+ const after=env.DB.raw.prepare('SELECT salt,hash FROM admin').get();assert.notEqual(after.salt,before.salt);assert.notEqual(after.hash,before.hash);
+ assert.equal(env.DB.raw.prepare('SELECT count(*) c FROM sessions').get().c,0);
+ for(const c of [s1,s2])assert.equal((await call('GET','/api/reservations',{token:c,now:t})).s,401,'old sessions revoked');
+ assert.equal((await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'203.0.113.22',now:t})).s,401,'old password dead');
+ assert.equal((await call('POST','/api/login',{body:{username:'admin',key:NEW},ip:'203.0.113.22',now:t})).s,200,'new 4-char password works');}
+// global cap: 20 failures from many IPs -> global lock 1h
+{for(let i=0;i<20;i++)await call('POST','/api/login',{body:{username:'admin',key:BAD},ip:'192.0.2.'+i,now:t});
+ assert.equal((await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'192.0.2.200',now:t})).s,429,'global lock');
+ assert.equal((await call('POST','/api/login',{body:{username:'admin',key:await ConsentKdf.derive('admin','4321')},ip:'192.0.2.200',now:t+61*60e3})).s,200,'unlocks after 1h');}
+// setup race: two concurrent setups -> exactly one admin
+{const e2={DB:d1(),PEPPER:env.PEPPER,SETUP_TOKEN:env.SETUP_TOKEN,SETUP_UNTIL:String(t+3600e3)};const mk=k=>handle(new Request('https://api.example/api/setup',{method:'POST',headers:{Origin:ORIGIN,'X-Requested-With':'consent','Content-Type':'application/json'},body:JSON.stringify({token:e2.SETUP_TOKEN,username:'admin',key:k})}),e2,t);
+ const rs=await Promise.all([mk(KEY),mk(BAD),mk(KEY)]);assert.deepEqual(rs.map(r=>r.status).sort(),[201,410,410]);assert.equal(e2.DB.raw.prepare('SELECT count(*) c FROM admin').get().c,1);}
 // storage contains only allowed columns
 assert.deepEqual(env.DB.raw.prepare('PRAGMA table_info(reservations)').all().map(c=>c.name),['id','res_no','name','phone','email','version','created_at','updated_at']);
 const src=fs.readFileSync(path.join(root,'worker/index.mjs'),'utf8');assert(!/console\./.test(src),'no logging');assert(!/Access-Control-Allow/.test(src),'no CORS');
