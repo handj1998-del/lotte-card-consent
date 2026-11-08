@@ -76,3 +76,25 @@ fieldset,.guidance-panel,#extraDrivers{border-color:var(--line);border-radius:12
 .card-format-status[data-state=invalid]{color:#b00020}
 .card-format-status[data-state=valid]{color:#1b6b3a}
 .phone-help,.guide-scope,.small{color:var(--muted)}
+
+/* Reservation screen (local admin) */
+body.view-reserve #guidancePanel,body.view-reserve .entry-workspace,body.view-reserve .source-section{display:none!important}
+body:not(.view-reserve) #resScreen{display:none}
+.res-screen{max-width:1100px;margin:8px auto;background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px 22px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.res-screen h2{font-size:22px;margin:0 0 8px;color:var(--ink);border-left:4px solid var(--accent);padding-left:10px}.res-screen h2:focus{outline:none}
+.res-screen h3{font-size:18px;margin:8px 0 12px}
+.res-screen p{font-size:16px;line-height:1.55}
+.res-msg:empty{display:none}.res-msg{color:var(--accent-dark);font-weight:600}
+.res-screen form,.res-form{display:grid;gap:14px;margin:12px 0}
+.res-screen .entry-field{height:58px;min-height:58px;font-size:18px;padding:12px 14px}
+.res-screen .input-label{font-size:17px}
+.res-actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.res-actions button,.res-item button{min-height:52px;font-size:17px;padding:10px 18px}
+.res-primary{background:var(--accent)!important;border-color:var(--accent)!important;color:#fff!important;font-weight:600}
+.res-danger{color:#b00020;border-color:#e3a5ad}
+.res-quiet{color:var(--muted)}
+.res-list{list-style:none;padding:0;margin:14px 0;display:grid;gap:10px}
+.res-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.res-label{font-size:18px;font-weight:600;overflow-wrap:anywhere}
+.res-empty{color:var(--muted);font-size:16px}
+@media(max-width:699px){.res-item{grid-template-columns:1fr 1fr 1fr}.res-label{grid-column:1/-1}}
