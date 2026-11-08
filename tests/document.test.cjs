@@ -6,8 +6,8 @@ const js=read('consent.js'),html=read('index.html'),css=read('consent.css');
 assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'assets/consent/original.pdf'))).digest('hex'),'98ff1bad3fabcd6ded07cfc896352967a6dae851db93ae2ade7a06cd13aec8c6');
 // one entry point each in the header + matching buttons in the document view
 assert.equal((html.match(/id="preview"/g)||[]).length,1);assert.equal((html.match(/id="save"/g)||[]).length,1);
-assert(/<nav class="header-actions"[^]*?<button id="preview"[^>]*data-i18n="preview">문서 보기<\/button><button id="save"[^>]*data-i18n="save">다운로드<\/button>/.test(html));
-assert(/<dialog id="previewDialog">[^]*id="savePreview"[^>]*>다운로드<\/button><button id="closePreview"[^>]*>닫기<\/button>[^]*<div id="previewPages"><\/div><\/dialog>/.test(html),'in-page view with download + close, empty until opened');
+assert(/<nav class="header-actions"[^]*?<button id="preview"[^>]*data-i18n="preview">문서 보기<\/button><button id="save"[^>]*data-i18n="save">동의완료<\/button>/.test(html));
+assert(/<dialog id="previewDialog">[^]*id="savePreview"[^>]*>동의완료<\/button><button id="closePreview"[^>]*>닫기<\/button>[^]*<div id="previewPages"><\/div><\/dialog>/.test(html),'in-page view with download + close, empty until opened');
 assert(/#preview,\.header-actions #save,#savePreview,#backPreview,#closePreview,#previewEntry\{font-size:18px;min-height:58px/.test(css));
 // fresh render from current values each time; busy guard; validation before both
 assert(/document\.getElementById\('preview'\)\.onclick=async\(\)=>\{if\(docBusy\|\|!validate\(\)\)return;setDocBusy\(true\);[^]*area\.replaceChildren\(\);for\(let p=1;p<=2;p\+\+\)\{const canvas=await renderPage\(p\)/.test(js));
@@ -21,4 +21,6 @@ assert(!/localStorage|sessionStorage|indexedDB|window\.open|_blank|\.target\s*=/
 assert(!/fetch\((?!'assets\/consent\/original\.pdf')/.test(js),'no network except the bundled template');
 const src=read('i18n.js');const st=src.indexOf('const translations=')+19;const d=JSON.parse(src.slice(st,src.indexOf(';\nlet currentLanguage',st)));
 for(const l of ['ko','en','zh-CN','zh-TW','ja'])for(const k of ['preview','save','previewTitle','previewHelp','previewClose','downloadReady'])assert(d[l][k],l+k);
-console.log('PASS: 문서 보기/다운로드 single entry points, in-page view (download+close), 18px/58px, fresh render, busy guard, validation, cleanup on close/new customer, local+download only, original PDF hash, 5 languages');
+const dlgv=html.match(/<dialog id="reviewDialog"[^]*?<\/dialog>/)[0];assert(!/동의완료|data-i18n="save"/.test(dlgv),'PC review has no completion/download');
+assert(!/\.checked=true|\.checked = true/.test(js),'no auto-check');
+console.log('PASS: 동의완료 label, 문서 보기/다운로드 single entry points, in-page view (download+close), 18px/58px, fresh render, busy guard, validation, cleanup on close/new customer, local+download only, original PDF hash, 5 languages');
