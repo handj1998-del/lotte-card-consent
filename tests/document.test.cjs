@@ -11,7 +11,7 @@ assert(/<dialog id="previewDialog">[^]*id="savePreview"[^>]*>동의완료<\/butt
 assert(/#preview,\.header-actions #save,#savePreview,#backPreview,#closePreview,#previewEntry\{font-size:18px;min-height:58px/.test(css));
 // fresh render from current values each time; busy guard; validation before both
 assert(/document\.getElementById\('preview'\)\.onclick=async\(\)=>\{if\(docBusy\|\|!validate\(\)\)return;setDocBusy\(true\);[^]*area\.replaceChildren\(\);for\(let p=1;p<=2;p\+\+\)\{const canvas=await renderPage\(p\)/.test(js));
-assert(/document\.getElementById\('save'\)\.onclick=async\(\)=>\{[^\n]*if\(docBusy\|\|!validate\(\)\)return;setDocBusy\(true\);[^\n]*fetch\('assets\/consent\/original\.pdf'[^\n]*renderOverlay\(page\)[^\n]*makePDF\(originalBytes,overlays\);saveBlob\(/.test(js),'download builds a fresh PDF from original + current overlay');
+assert(/document\.getElementById\('save'\)\.onclick=async\(\)=>\{[^\n]*if\(docBusy\|\|!validate\(\)\)return;setDocBusy\(true\);[^\n]*const blob=await makeJPG\(\);saveBlob\(blob,`consent-\$\{today\(\)\}\.jpg`\)/.test(js),'fresh JPEG from current form');assert(/async function makeJPG\(\)\{[^\n]*await renderPage\(p\)/.test(js));
 assert(/finally\{setDocBusy\(false\);\}\};[^]*finally\{setDocBusy\(false\);\}\};/.test(js));
 assert(/function validate\(\)\{const name=[^}]*alert\(t\('nameRequired'\)\)/.test(js),'missing required name is explained, no blank PDF');
 assert(js.includes("addEventListener('close',clearPreview)")&&/function clearPreview\(\)\{[^\n]*c\.width=c\.height=1;[^\n]*replaceChildren\(\)/.test(js),'closing drops rendered pages');
