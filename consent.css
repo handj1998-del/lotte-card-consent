@@ -112,3 +112,6 @@ body:not(.view-reserve) #resScreen{display:none}
 .rv-checks{display:flex;flex-wrap:wrap;gap:8px;padding:0;list-style:none}.rv-checks li{padding:6px 10px;border-radius:6px;background:#e7f6ec}.rv-checks li[data-state=invalid],.rv-checks li[data-state=false],.rv-checks li[data-state=empty]{background:#fdeaea}
 .rv-table{width:100%;border-collapse:collapse;font-size:18px}.rv-table th,.rv-table td{border-bottom:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}.rv-table th{width:34%;color:#555;font-weight:600}.rv-card{font-family:ui-monospace,monospace;font-size:22px;letter-spacing:1px}
 .rv-sigs{display:flex;flex-wrap:wrap;gap:12px}.rv-sigs figure{margin:0;border:1px solid #ddd;padding:6px}.rv-sigs img{max-width:320px;height:auto;display:block}.rv-pages canvas{width:100%;height:auto;display:block;margin:12px 0;border:1px solid #ddd}
+
+/* Reservation list: full reservation/contract number, wraps (never clipped) */
+.res-label{font-size:19px;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:keep-all;min-width:0;flex:1 1 220px}

@@ -23,7 +23,7 @@
   wrong current password on 비밀번호 변경). An attacker can therefore lock staff out for an hour at a time.
 - Bootstrap: closed unless BOTH `SETUP_TOKEN` (>=32 chars) and `SETUP_UNTIL` (<= 24 h ahead) Worker secrets exist and no admin
   exists. Never a first-visitor claim.
-- Edits carry `version`; a stale edit/delete returns 409 and the list reloads. Lists are masked, paged 50 at a time.
+- Edits carry `version`; a stale edit/delete returns 409 and the list reloads. Lists show the full reservation/contract number and a masked name (phone/email never listed), paged 50 at a time.
 
 # PC live review ("PC 확인 공유") — Worker origin only
 - Tablet (signed in): 입력 screen → **PC 확인 공유 시작** / **중지**. PC (signed in): 공유 예약 → **작성 화면 확인** (read-only dialog:

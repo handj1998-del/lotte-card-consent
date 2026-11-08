@@ -46,7 +46,7 @@ assert.equal((await call('PUT','/api/reservations/00000000-0000-4000-8000-000000
 assert.notEqual(pc,tab);
 const rec={no:'TEST-RES-0001',name:'TEST USER',phone:'+1 555 0100',email:'test.user@example.invalid'};
 r=await call('POST','/api/reservations',{token:pc,body:rec});assert.equal(r.s,201);const id=r.j.id;
-r=await call('GET','/api/reservations',{token:tab});assert.equal(r.s,200);assert.equal(r.j.items.length,1);assert.equal(r.j.items[0].label,'TE••••••••001 · T•••••••R');{const vis=JSON.stringify(r.j.items.map(({id,...x})=>x));assert(!vis.includes('555')&&!vis.includes('example.invalid')&&!vis.includes('TEST USER'),'list masked');}
+r=await call('GET','/api/reservations',{token:tab});assert.equal(r.s,200);assert.equal(r.j.items.length,1);assert.equal(r.j.items[0].label,'TEST-RES-0001 · T•••••••R');{const vis=JSON.stringify(r.j.items.map(({id,...x})=>x));assert(!vis.includes('555')&&!vis.includes('example.invalid')&&!vis.includes('TEST USER')&&vis.includes('TEST-RES-0001'),'name masked, number full');}
 r=await call('GET','/api/reservations/'+id,{token:tab});assert.deepEqual({no:r.j.no,name:r.j.name,phone:r.j.phone,email:r.j.email},rec);
 // validation: card fields / card-like values / unknown keys rejected
 assert.equal((await call('POST','/api/reservations',{token:pc,body:{...rec,cardNumber:'4111111111111111'}})).j.error,'field:cardNumber');
@@ -54,6 +54,11 @@ assert.equal((await call('POST','/api/reservations',{token:pc,body:{...rec,phone
 assert.equal((await call('POST','/api/reservations',{token:pc,body:{name:'X'}})).j.error,'required');
 assert.equal((await call('POST','/api/reservations',{token:pc,body:{...rec,no:"x'); DROP TABLE reservations;--"}})).s,201,'parameterized');
 assert.equal(env.DB.raw.prepare('SELECT count(*) c FROM reservations').get().c,2);
+{const longNo='TEST-CONTRACT-2026-1108-0000000000123456';const x=await call('POST','/api/reservations',{token:pc,body:{no:longNo,name:'왕소명 TEST',phone:'+1 555 0199',email:'long@example.invalid'}});
+ const l=(await call('GET','/api/reservations',{token:tab})).j.items.find(i=>i.id===x.j.id);assert.equal(l.label,longNo+' · 왕••••••T','full number, masked name');assert(!JSON.stringify(l).includes('0199')&&!JSON.stringify(l).includes('long@'),'phone/email not in list');
+ assert.equal((await call('GET','/api/reservations')).s,401,'list needs auth');await call('DELETE','/api/reservations/'+x.j.id+'?version=1',{token:pc});}
+const ui=fs.readFileSync(path.join(root,'server-reservations.js'),'utf8'),loc=fs.readFileSync(path.join(root,'reservations.js'),'utf8');assert(ui.includes('l.textContent=r.label')&&!/innerHTML/.test(ui+loc),'names rendered as text');assert(loc.includes('label.textContent=`${r.no} · ${ReservationVault.maskName(r.name)}`'));
+assert(/\.res-label\{[^}]*white-space:normal;overflow-wrap:anywhere/.test(fs.readFileSync(path.join(root,'consent.css'),'utf8')),'long names wrap');
 // stale edit
 r=await call('PUT','/api/reservations/'+id,{token:tab,body:{...rec,phone:'+82 10 0000 0000',version:1}});assert.equal(r.s,200);assert.equal(r.j.version,2);
 assert.equal((await call('PUT','/api/reservations/'+id,{token:pc,body:{...rec,version:1}})).s,409,'stale edit rejected');

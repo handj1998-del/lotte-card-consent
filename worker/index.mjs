@@ -222,7 +222,7 @@ async function inner(req, env, now) {
     if (c && /^\d+:[0-9a-f-]{36}$/.test(c)) { const [t, id] = c.split(':'); rows = (await db.prepare('SELECT id, res_no, name, version, updated_at FROM reservations WHERE (updated_at < ?) OR (updated_at = ? AND id > ?) ORDER BY updated_at DESC, id LIMIT ?').bind(+t, +t, id, limit + 1).all()).results; }
     else rows = (await db.prepare('SELECT id, res_no, name, version, updated_at FROM reservations ORDER BY updated_at DESC, id LIMIT ?').bind(limit + 1).all()).results;
     const more = rows.length > limit; rows = rows.slice(0, limit);
-    return json(req, 200, { items: rows.map(r => ({ id: r.id, label: `${maskNo(r.res_no)} · ${maskName(r.name)}`, version: r.version, updatedAt: r.updated_at })), next: more ? `${rows[rows.length - 1].updated_at}:${rows[rows.length - 1].id}` : null });
+    return json(req, 200, { items: rows.map(r => ({ id: r.id, label: `${r.res_no} · ${maskName(r.name)}`, version: r.version, updatedAt: r.updated_at })), next: more ? `${rows[rows.length - 1].updated_at}:${rows[rows.length - 1].id}` : null });
   }
   if (p === '/api/reservations' && req.method === 'POST') {
     const v = validate(await readJson(req), false); if (typeof v === 'string') return json(req, 400, { error: v });
