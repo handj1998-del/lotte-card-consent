@@ -25,7 +25,8 @@ if(typeof document!=='undefined')(function(){
   async function load(more){const q='api/reservations?limit=50'+(more&&next?'&cursor='+encodeURIComponent(next):'');let r;try{r=await api('GET',q);}catch{msg('srvNetErr');return false;}
     if(r.s===401){expired();return false;}if(r.s!==200){msg('srvNetErr');return false;}items=more?items.concat(r.j.items):r.j.items;next=r.j.next;render();return true;}
   async function full(r){let x;try{x=await api('GET','api/reservations/'+r.id);}catch{msg('srvNetErr');return null;}if(x.s===401){expired();return null;}if(x.s===404){msg('srvConflict');await load(false);return null;}if(x.s!==200){msg('srvNetErr');return null;}return x.j;}
-  async function select(r){const rec=await full(r);if(!rec)return;const copy={no:rec.no,name:rec.name,phone:rec.phone,email:rec.email};if(window.consentStartCustomer(copy)){on=false;$('srvList').replaceChildren();items=[];}}
+  async function select(r){const rec=await full(r);if(!rec)return;// same customer -> startCustomer keeps the current draft
+    const copy={no:rec.no,name:rec.name,phone:rec.phone,email:rec.email};if(window.consentStartCustomer(copy)){on=false;$('srvList').replaceChildren();items=[];}}
   async function edit(r){const rec=await full(r);if(!rec)return;editing={id:rec.id,version:rec.version};const f=$('srvForm');f.hidden=false;for(const k of ['no','name','phone','email'])f.elements[k].value=rec[k];f.elements.no.focus();}
   async function remove(r){if(!confirm(t('resDeleteConfirm')))return;let x;try{x=await api('DELETE','api/reservations/'+r.id+'?version='+r.version);}catch{msg('srvNetErr');return;}
     if(x.s===401)return expired();if(x.s===409||x.s===404){msg('srvConflict');await load(false);return;}if(x.s!==200){msg('srvNetErr');return;}await load(false);msg('resDeleted');}

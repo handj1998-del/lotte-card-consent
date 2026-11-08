@@ -29,7 +29,7 @@ if(typeof document!=='undefined')(function(){
   const $=id=>document.getElementById(id);let session=null,failures=0,lockUntil=0,idle=null,editingId=null;
   const IDLE_MS=120000;
   function setMsg(key,extra){const m=$('resMsg');m.textContent=key?t(key)+(extra||''):'';}
-  function stage(name){for(const id of ['resLocked','resSetup','resUnlock','resAdmin','srvSetup','srvLogin','srvAdmin'])$(id).hidden=id!==name;}
+  function stage(name){for(const id of ['resLocked','resSetup','resUnlock','resAdmin','srvSetup','srvLogin','srvAdmin'])$(id).hidden=id!==name;updateResume();}
   function lock(){session=null;editingId=null;clearTimeout(idle);$('resList').replaceChildren();$('resForm').reset();$('resForm').hidden=true;$('resPinForm').reset();$('resPinForm').hidden=true;for(const f of document.querySelectorAll('#resScreen input[type=password]'))f.value='';stage('resLocked');}
   function touch(){if(!session)return;clearTimeout(idle);idle=setTimeout(()=>{lock();setMsg('resAutoLocked');},IDLE_MS);}
   function renderList(){const list=$('resList');list.replaceChildren();if(!session.records.length){const p=document.createElement('li');p.className='res-empty';p.textContent=t('resEmpty');list.append(p);return;}
@@ -38,15 +38,21 @@ if(typeof document!=='undefined')(function(){
   function btn(key,cls,fn){const b=document.createElement('button');b.type='button';b.className=cls;b.setAttribute('data-i18n',key);b.textContent=t(key);b.addEventListener('click',()=>{touch();fn();});return b;}
   function openForm(r){editingId=r?r.id:null;const f=$('resForm');f.hidden=false;f.elements.no.value=r?r.no:'';f.elements.name.value=r?r.name:'';f.elements.phone.value=r?r.phone:'';f.elements.email.value=r?r.email:'';f.elements.no.focus();}
   async function remove(id){if(!confirm(t('resDeleteConfirm')))return;session.records=session.records.filter(r=>r.id!==id);await ReservationVault.save(session);renderList();setMsg('resDeleted');}
-  function formDirty(){const filled=fields.some(f=>f.el.type!=='date'&&f.el.value.trim());return filled||signatures.some(s=>s.image);}
+  function formDirty(){const filled=fields.some(f=>f.el.type!=='date'&&f.el.value.trim());return filled||signatures.some(s=>s.image)||(typeof choices!=='undefined'&&choices.some(c=>c.el.checked));}
+  // Same customer = the form already holds this reservation number + name: keep the whole draft (card, signatures, checks).
+  const val=l=>{const f=fields.find(x=>x.label===l);return f?f.el.value.trim():'';};
+  function sameCustomer(r){return !!(r&&String(r.no||'').trim()&&val('예약번호')===String(r.no).trim()&&val('임차인 이름')===String(r.name||'').trim());}
+  function resumeDraft(){lock();setMsg('');window.consentShowView('entry');}
+  function updateResume(){const b=$('resResume');if(b)b.hidden=!formDirty();}
   function clearCustomerForm(){const pd=document.getElementById('previewDialog');if(pd&&pd.open)pd.close();fields.forEach(f=>f.el.value=f.el.type==='date'&&['1쪽 서명 날짜','임차인 날짜'].includes(f.label)?today():'');if(typeof choices!=='undefined')choices.forEach(c=>c.el.checked=false);signatures.forEach(s=>{s.image=null;s.el.setAttribute('data-i18n','signButton');s.el.textContent=t('signButton');});document.getElementById('cardFields').dispatchEvent(new Event('input'));const cf=fields.find(f=>f.label==='카드번호');if(cf)cf.el.dispatchEvent(new Event('input'));}
   function fill(r){const set=(label,v)=>{const f=fields.find(x=>x.label===label);f.el.value=v;f.el.dispatchEvent(new Event('input',{bubbles:true}));};set('예약번호',r.no);set('임차인 이름',r.name);set('전화번호',r.phone);set('이메일',r.email);}
-  function startCustomer(r){if(formDirty()&&!confirm(t('resClearConfirm'))){return false;}if(window.consentReviewStop)window.consentReviewStop();clearCustomerForm();if(r)fill(r);lock();setMsg('');window.consentShowView('guide');return true;}
+  function startCustomer(r){if(sameCustomer(r)){resumeDraft();return true;}if(formDirty()&&!confirm(t('resClearConfirm'))){return false;}if(window.consentReviewStop)window.consentReviewStop();clearCustomerForm();if(r)fill(r);lock();setMsg('');window.consentShowView('guide');return true;}
   function select(id){const r=session&&session.records.find(x=>x.id===id);if(!r)return;const copy={...r};startCustomer(copy);}
   async function withBackoff(fn){const now=Date.now();if(now<lockUntil){setMsg('resWait',` (${Math.ceil((lockUntil-now)/1000)}s)`);return;}try{await fn();failures=0;}catch(e){if(e.message!=='badpin')throw e;failures++;lockUntil=Date.now()+Math.min(60000,1000*2**Math.max(0,failures-2));setMsg('resBadPin');}}
   const pinOk=v=>/^\d{4,12}$/.test(v);
   $('resAdminBtn').addEventListener('click',()=>{setMsg('');if(ReservationVault.exists()){stage('resUnlock');$('resPin').focus();}else{stage('resSetup');$('resNewPin').focus();}});
   $('resNoBooking').addEventListener('click',()=>startCustomer(null));
+  $('resResume').addEventListener('click',resumeDraft);
   $('resSetup').addEventListener('submit',async e=>{e.preventDefault();const a=$('resNewPin').value,b=$('resNewPin2').value;if(!pinOk(a)){setMsg('resPinRule');return;}if(a!==b){setMsg('resPinMismatch');return;}session=await ReservationVault.setup(a);$('resNewPin').value=$('resNewPin2').value='';stage('resAdmin');renderList();touch();setMsg('resSetupDone');});
   $('resUnlock').addEventListener('submit',async e=>{e.preventDefault();const pin=$('resPin').value;$('resPin').value='';await withBackoff(async()=>{session=await ReservationVault.unlock(pin);stage('resAdmin');renderList();touch();setMsg('');});});
   $('resCancelSetup').addEventListener('click',()=>{lock();setMsg('');});$('resCancelUnlock').addEventListener('click',()=>{lock();setMsg('');});

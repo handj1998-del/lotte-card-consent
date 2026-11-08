@@ -188,7 +188,8 @@ const translations={
     "rvNameLbl": "임차인 이름",
     "rvCardLbl": "카드번호 형식",
     "rvExpiryLbl": "유효기간",
-    "rvSignLbl": "임차인 서명"
+    "rvSignLbl": "임차인 서명",
+    "resResume": "작성 중인 화면으로 돌아가기"
   },
   "en": {
     "appTitle": "Card information consent form",
@@ -377,7 +378,8 @@ const translations={
     "rvNameLbl": "Renter name",
     "rvCardLbl": "Card number format",
     "rvExpiryLbl": "Expiry",
-    "rvSignLbl": "Renter signature"
+    "rvSignLbl": "Renter signature",
+    "resResume": "Back to the form in progress"
   },
   "zh-CN": {
     "appTitle": "银行卡信息同意书",
@@ -566,7 +568,8 @@ const translations={
     "rvNameLbl": "租车人姓名",
     "rvCardLbl": "卡号格式",
     "rvExpiryLbl": "有效期",
-    "rvSignLbl": "租车人签名"
+    "rvSignLbl": "租车人签名",
+    "resResume": "返回正在填写的画面"
   },
   "zh-TW": {
     "appTitle": "卡片資料同意書",
@@ -755,7 +758,8 @@ const translations={
     "rvNameLbl": "租車人姓名",
     "rvCardLbl": "卡號格式",
     "rvExpiryLbl": "有效期限",
-    "rvSignLbl": "租車人簽名"
+    "rvSignLbl": "租車人簽名",
+    "resResume": "返回正在填寫的畫面"
   },
   "ja": {
     "appTitle": "カード情報の取扱い同意書",
@@ -944,7 +948,8 @@ const translations={
     "rvNameLbl": "借受人氏名",
     "rvCardLbl": "カード番号の形式",
     "rvExpiryLbl": "有効期限",
-    "rvSignLbl": "借受人の署名"
+    "rvSignLbl": "借受人の署名",
+    "resResume": "入力中の画面に戻る"
   }
 };
 let currentLanguage='ko';

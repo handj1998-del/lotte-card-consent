@@ -115,3 +115,5 @@ body:not(.view-reserve) #resScreen{display:none}
 
 /* Reservation list: full reservation/contract number, wraps (never clipped) */
 .res-label{font-size:19px;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:keep-all;min-width:0;flex:1 1 220px}
+
+.res-resume{display:block;width:100%;font-size:18px;min-height:58px;font-weight:700;background:var(--accent);border-color:var(--accent);color:#fff;margin:8px 0 14px}.res-resume[hidden]{display:none}

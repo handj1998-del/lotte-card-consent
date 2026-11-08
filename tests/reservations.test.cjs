@@ -30,7 +30,7 @@ const js=read('reservations.js'),html=read('index.html'),cj=read('consent.js');
 assert(!/fetch\(|XMLHttpRequest|sendBeacon|sessionStorage|indexedDB|console\.|location\.(hash|search|href)\s*=/.test(js));
 assert(!/\b8\d{3}\b/.test(js+html+cj),'no hardcoded 4-digit PIN-like constant');
 assert(!/localStorage|sessionStorage|indexedDB/.test(cj+read('guide.js')),'form/card/signature never persisted');
-assert(/function startCustomer\(r\)\{if\(formDirty\(\)&&!confirm\(t\('resClearConfirm'\)\)\)/.test(js),'confirm before clearing another customer');
+assert(/function startCustomer\(r\)\{if\(sameCustomer\(r\)\)\{resumeDraft\(\);return true;\}if\(formDirty\(\)&&!confirm\(t\('resClearConfirm'\)\)\)/.test(js),'confirm before clearing another customer');
 assert(/clearCustomerForm\(\);if\(r\)fill\(r\);lock\(\);/.test(js),'clear -> fill -> lock on handoff');
 assert(/function remove\(id\)\{if\(!confirm\(t\('resDeleteConfirm'\)\)\)return;/.test(js),'delete confirm');
 assert(js.includes("window.addEventListener('pagehide',lock)")&&js.includes('document.hidden)lock()')&&/IDLE_MS=\d+/.test(js));
