@@ -48,6 +48,19 @@ async function proxy(req, url) {
 }
 const FIELDS = { no: 40, name: 80, phone: 40, email: 120 };
 function looksLikeCard(v) { const d = v.replace(/[\s-]/g, ''); if (!/^\d{13,19}$/.test(d)) return false; let s = 0, e = false; for (let i = d.length - 1; i >= 0; i--) { let n = +d[i]; if (e) { n *= 2; if (n > 9) n -= 9; } s += n; e = !e; } return s % 10 === 0; }
+// Phone: digits with common punctuation (space - . ( ) and one leading +). International form (+ or 00 then a country code
+// 1-9) follows E.164: country code + national number = 8-15 digits, so 13-17-digit strings like 00358... are accepted even when
+// they happen to pass Luhn (no payment card number starts with 0, ISO/IEC 7812). Domestic numbers: 4-15 digits and, if
+// 13-15 digits, must not pass Luhn (a bare card-shaped number stays blocked). Ambiguous digit strings cannot be told apart
+// perfectly; this keeps obvious card numbers out while allowing real international phones.
+function phoneOk(v) {
+  if (!v) return true;
+  if (!/^\+?[\d\s().-]+$/.test(v)) return false;
+  const d = v.replace(/\D/g, '');
+  const intl = v.startsWith('+') ? d : d.startsWith('00') ? d.slice(2) : null;
+  if (intl !== null) return /^[1-9]\d{7,14}$/.test(intl);
+  return d.length >= 4 && d.length <= 15 && !looksLikeCard(d);
+}
 function validate(body, needVersion) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return 'body';
   const allowed = new Set([...Object.keys(FIELDS), ...(needVersion ? ['version'] : [])]);
@@ -58,7 +71,7 @@ function validate(body, needVersion) {
     if (typeof v !== 'string') return 'type:' + k;
     const t = v.trim(); if (t.length > max) return 'length:' + k;
     if (/[\u0000-\u001f]/.test(t)) return 'chars:' + k;
-    if (looksLikeCard(t)) return 'card:' + k;
+    if (k === 'phone' ? !phoneOk(t) : looksLikeCard(t)) return (k === 'phone' && !looksLikeCard(t) ? 'phone' : 'card:' + k);
     out[k] = t;
   }
   if (!out.no || !out.name) return 'required';

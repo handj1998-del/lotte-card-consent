@@ -14,6 +14,8 @@ if(typeof document!=='undefined')(function(){
   async function api(method,path,body){const o={method,credentials:'same-origin',cache:'no-store',headers:{'X-Requested-With':'consent'}};if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body);}
     const r=await fetch(path,o);let j=null;try{j=await r.json();}catch{}return{s:r.status,j:j||{}};}
   function wipe(){on=false;items=[];next=null;editing=null;$('srvList').replaceChildren();$('srvForm').reset();$('srvForm').hidden=true;$('srvMore').hidden=true;for(const id of ['srvPass','srvNewPass','srvNewPass2','srvToken','srvCurPw','srvNewPw','srvNewPw2'])$(id).value='';$('srvPwForm').hidden=true;}
+  // 400 from the server = the entry itself was refused; show why and keep the form as typed.
+  function saveErr(c){c=String(c||'');return c.startsWith('card:')?'srvErrCard':c==='phone'?'srvErrPhone':c==='email'?'srvErrEmail':c.startsWith('length:')?'srvErrLength':c==='required'?'resRequired':'srvErrInvalid';}
   async function logout(quiet){if(window.consentReviewStop)window.consentReviewStop();if(window.consentReviewClose)window.consentReviewClose();const was=on;wipe();if(was)try{await fetch('api/logout',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'X-Requested-With':'consent'}});}catch{}if(!quiet){stage('resLocked');msg('srvLoggedOut');}}
   // Stays signed in until deliberate logout (no idle/tab/handoff logout, by owner choice).
   function touch(){}
@@ -33,7 +35,7 @@ if(typeof document!=='undefined')(function(){
   $('srvForm').addEventListener('submit',async e=>{e.preventDefault();if(busy)return;touch();const f=e.target.elements,body={no:f.no.value.trim(),name:f.name.value.trim(),phone:f.phone.value.trim(),email:f.email.value.trim()};
     if(!body.no||!body.name){msg('resRequired');return;}busy=true;let x;try{x=editing?await api('PUT','api/reservations/'+editing.id,{...body,version:editing.version}):await api('POST','api/reservations',body);}catch{x=null;}finally{busy=false;}
     if(!x){msg('srvNetErr');return;}if(x.s===401)return expired();if(x.s===409||x.s===404){msg('srvConflict');e.target.reset();e.target.hidden=true;editing=null;await load(false);return;}
-    if(x.s!==200&&x.s!==201){msg('srvNetErr');return;}e.target.reset();e.target.hidden=true;editing=null;await load(false);msg('resSaved');});
+    if(x.s===400){msg(saveErr(x.j.error));return;}if(x.s!==200&&x.s!==201){msg('srvNetErr');return;}e.target.reset();e.target.hidden=true;editing=null;await load(false);msg('resSaved');});
   $('srvFormCancel').addEventListener('click',()=>{$('srvForm').reset();$('srvForm').hidden=true;editing=null;});
   $('srvAdd').addEventListener('click',()=>{touch();editing=null;const f=$('srvForm');f.reset();f.hidden=false;f.elements.no.focus();});
   $('srvRefresh').addEventListener('click',async()=>{touch();if(await load(false))msg('');});

@@ -54,6 +54,20 @@ assert.equal((await call('POST','/api/reservations',{token:pc,body:{...rec,phone
 assert.equal((await call('POST','/api/reservations',{token:pc,body:{name:'X'}})).j.error,'required');
 assert.equal((await call('POST','/api/reservations',{token:pc,body:{...rec,no:"x'); DROP TABLE reservations;--"}})).s,201,'parameterized');
 assert.equal(env.DB.raw.prepare('SELECT count(*) c FROM reservations').get().c,2);
+// phone-aware validation: Luhn-valid international phones save (several records), card numbers still refused, precise errors
+{const luhn=d=>{let s=0,e=false;for(let i=d.length-1;i>=0;i--){let n=+d[i];if(e){n*=2;if(n>9)n-=9;}s+=n;e=!e;}return s%10===0;};
+ const lv=pre=>{for(let c=0;c<10;c++){const d=pre+c;if(luhn(d))return d;}};const p13=lv('003580000000'),p15=lv('+35800000000000'.slice(1));assert(luhn(p13)&&p13.length===13);
+ const before=env.DB.raw.prepare('SELECT count(*) c FROM reservations').get().c;
+ for(const [i,ph] of [p13,'+'+p15,'00358 '+p13.slice(5,7)+' '+p13.slice(7),'+82 10-0000-0000','(02) 000-0000','010-0000-0000',''].entries()){const r=await call('POST','/api/reservations',{token:pc,body:{no:'TEST-MULTI-'+i,name:'TEST MULTI',phone:ph,email:''}});assert.equal(r.s,201,'phone accepted: shape '+i);}
+ assert.equal(env.DB.raw.prepare('SELECT count(*) c FROM reservations').get().c,before+7,'many reservations, no 1-record cap');
+ const bad=async(b,err)=>{const r=await call('POST','/api/reservations',{token:pc,body:{...rec,...b}});assert.equal(r.s,400);assert.equal(r.j.error,err,JSON.stringify(b));};
+ await bad({phone:'4111111111111111'},'card:phone');await bad({phone:'5555-5555-5555-4444'},'card:phone');await bad({phone:'378282246310005'},'card:phone');
+ await bad({phone:'+4111111111111111'},'phone');await bad({phone:'00'+'1'.repeat(16)},'phone');await bad({phone:'+0 123 4567'},'phone');await bad({phone:'call me'},'phone');await bad({phone:'12'},'phone');await bad({phone:'1234567890123456'},'phone');
+ await bad({no:'4111111111111111'},'card:no');await bad({name:'4111 1111 1111 1111'},'card:name');await bad({email:'4111111111111111'},'card:email');await bad({email:'not-an-email'},'email');await bad({name:'x'.repeat(81)},'length:name');
+ const r=await call('PUT','/api/reservations/'+id,{token:pc,body:{...rec,phone:p13,version:1}});assert.equal(r.s,200,'edit with intl phone');
+ const r2=await call('PUT','/api/reservations/'+id,{token:pc,body:{...rec,phone:p13,version:2}});assert.equal(r2.s,200);
+ env.DB.raw.prepare("DELETE FROM reservations WHERE res_no LIKE 'TEST-MULTI-%'").run();
+ env.DB.raw.prepare("UPDATE reservations SET phone=?,version=1 WHERE id=?").run(rec.phone,id);}
 {const longNo='TEST-CONTRACT-2026-1108-0000000000123456';const x=await call('POST','/api/reservations',{token:pc,body:{no:longNo,name:'왕소명 TEST',phone:'+1 555 0199',email:'long@example.invalid'}});
  const l=(await call('GET','/api/reservations',{token:tab})).j.items.find(i=>i.id===x.j.id);assert.equal(l.label,longNo+' · 왕••••••T','full number, masked name');assert(!JSON.stringify(l).includes('0199')&&!JSON.stringify(l).includes('long@'),'phone/email not in list');
  assert.equal((await call('GET','/api/reservations')).s,401,'list needs auth');await call('DELETE','/api/reservations/'+x.j.id+'?version=1',{token:pc});}

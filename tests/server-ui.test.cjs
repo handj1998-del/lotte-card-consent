@@ -6,8 +6,8 @@ const js=read('server-reservations.js'),html=read('index.html');
 assert(!/localStorage|sessionStorage|indexedDB|document\.cookie|console\.|Authorization|Bearer/.test(js),'no client-side token/secret storage or logging');
 assert(/credentials:'same-origin'/.test(js)&&!/https?:\/\//.test(js.replace(/\/\/.*$/gm,'')),'same-origin relative API only');
 assert(/body=\{no:f\.no\.value\.trim\(\),name:f\.name\.value\.trim\(\),phone:f\.phone\.value\.trim\(\),email:f\.email\.value\.trim\(\)\}/.test(js),'only 4 fields sent');
-assert(!/card|expiry|signature/i.test(js.replace(/^\/\/.*$/gm,'')),'no card/signature access');
-assert(/if\(x\.s!==200&&x\.s!==201\)\{msg\('srvNetErr'\);return;\}e\.target\.reset\(\);e\.target\.hidden=true;editing=null;await load\(false\);msg\('resSaved'\)/.test(js),'saved msg only after server commit');
+assert(!/card|expiry|signature/i.test(js.replace(/^\s*\/\/.*$/gm,'').replace(/function saveErr\(c\)\{[^\n]*/,'')),'no card/signature access');assert(/function saveErr\(c\)\{c=String\(c\|\|''\);return c\.startsWith\('card:'\)\?'srvErrCard'/.test(js),'400 error codes mapped');
+assert(/if\(x\.s===400\)\{msg\(saveErr\(x\.j\.error\)\);return;\}if\(x\.s!==200&&x\.s!==201\)\{msg\('srvNetErr'\);return;\}e\.target\.reset\(\);e\.target\.hidden=true;editing=null;await load\(false\);msg\('resSaved'\)/.test(js),'saved msg only after server commit');
 assert(/x\.s===409/.test(js)&&/version:editing\.version/.test(js)&&/\?version='\+r\.version/.test(js),'version conflict handling');
 assert(js.includes("if(window.consentStartCustomer(copy)){on=false;$('srvList').replaceChildren();items=[];}")&&!/consentStartCustomer\(copy\)\)await logout/.test(js),'handoff keeps session, clears list DOM');
 assert(/const copy=\{no:rec\.no,name:rec\.name,phone:rec\.phone,email:rec\.email\}/.test(js),'only selected record handed off');
@@ -29,3 +29,4 @@ assert(js.includes("api('POST','api/password',{current:await ConsentKdf.derive(u
 assert(js.includes("normalize('NFC').trim().toLowerCase()")&&/id="srvUserRuleNote"/.test(html));for(const l of ['ko','en','zh-CN','zh-TW','ja'])assert(/2.32/.test(d[l].srvUserRule),l);
 for(const l of ['ko','en','zh-CN','zh-TW','ja'])assert(!/2\s*(분|min|分钟|分鐘|分)/.test(d[l].srvStorageNote),l);
 console.log('PASS: persistent session, korean username rule, password change UI, server UI same-origin cookie-only, 4 fields, commit-before-saved, 409/version, handoff+logout, hidden on Pages, password inputs, 5-language truthful notes');
+{const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');const src=fs.readFileSync(path.join(__dirname,'..','i18n.js'),'utf8');const m=src.match(/const translations\s*=\s*(\{[\s\S]*?\n\});/);if(m){const d=vm.runInNewContext('('+m[1].replace(/;$/,'')+')');for(const l of ['ko','en','zh-CN','zh-TW','ja'])for(const k of ['srvErrCard','srvErrPhone','srvErrEmail','srvErrLength','srvErrInvalid'])require('node:assert').ok(d[l][k],l+' '+k);console.log('PASS: 400 error messages ×5');}else console.log('NOTE: translations block not found');}
