@@ -163,7 +163,8 @@ const translations={
     "srvNewPw": "새 비밀번호",
     "srvPwChanged": "비밀번호를 변경했습니다. 모든 기기에서 로그아웃되었으니 새 비밀번호로 다시 로그인하세요.",
     "srvBadCurrent": "현재 비밀번호가 맞지 않습니다.",
-    "srvPwTip": "짧은 비밀번호(예: 숫자 4자리)는 추측될 수 있습니다. 더 긴 비밀번호로 바꾸는 것을 권장합니다."
+    "srvPwTip": "짧은 비밀번호(예: 숫자 4자리)는 추측될 수 있습니다. 더 긴 비밀번호로 바꾸는 것을 권장합니다.",
+    "srvUserRule": "아이디: 2–32자, 한글 완성형 글자·영문·숫자·마침표(.)·밑줄(_)·하이픈(-)만 사용 (공백·이모지·자모 단독 불가)"
   },
   "en": {
     "appTitle": "Card information consent form",
@@ -327,7 +328,8 @@ const translations={
     "srvNewPw": "New password",
     "srvPwChanged": "Password changed. All devices were signed out; sign in again with the new password.",
     "srvBadCurrent": "The current password is incorrect.",
-    "srvPwTip": "Short passwords (such as 4 digits) can be guessed. Changing to a longer password is recommended."
+    "srvPwTip": "Short passwords (such as 4 digits) can be guessed. Changing to a longer password is recommended.",
+    "srvUserRule": "Username: 2–32 characters; only Korean (Hangul) syllables, English letters, digits, period (.), underscore (_) and hyphen (-). No spaces, emoji or standalone jamo."
   },
   "zh-CN": {
     "appTitle": "银行卡信息同意书",
@@ -491,7 +493,8 @@ const translations={
     "srvNewPw": "新密码",
     "srvPwChanged": "密码已修改。所有设备均已退出登录，请使用新密码重新登录。",
     "srvBadCurrent": "当前密码不正确。",
-    "srvPwTip": "短密码（如4位数字）可能被猜中，建议改为更长的密码。"
+    "srvPwTip": "短密码（如4位数字）可能被猜中，建议改为更长的密码。",
+    "srvUserRule": "用户名：2–32个字符，只能使用韩文音节、英文字母、数字、句点(.)、下划线(_)和连字符(-)，不能包含空格、表情符号或单独的韩文字母。"
   },
   "zh-TW": {
     "appTitle": "卡片資料同意書",
@@ -655,7 +658,8 @@ const translations={
     "srvNewPw": "新密碼",
     "srvPwChanged": "密碼已變更。所有裝置均已登出，請使用新密碼重新登入。",
     "srvBadCurrent": "目前密碼不正確。",
-    "srvPwTip": "短密碼（如4位數字）可能被猜中，建議改為更長的密碼。"
+    "srvPwTip": "短密碼（如4位數字）可能被猜中，建議改為更長的密碼。",
+    "srvUserRule": "使用者名稱：2–32個字元，只能使用韓文音節、英文字母、數字、句點(.)、底線(_)和連字號(-)，不可包含空格、表情符號或單獨的韓文字母。"
   },
   "ja": {
     "appTitle": "カード情報の取扱い同意書",
@@ -819,7 +823,8 @@ const translations={
     "srvNewPw": "新しいパスワード",
     "srvPwChanged": "パスワードを変更しました。すべての端末でログアウトしたので、新しいパスワードで再度ログインしてください。",
     "srvBadCurrent": "現在のパスワードが正しくありません。",
-    "srvPwTip": "短いパスワード（4桁の数字など）は推測される可能性があります。より長いパスワードへの変更をおすすめします。"
+    "srvPwTip": "短いパスワード（4桁の数字など）は推測される可能性があります。より長いパスワードへの変更をおすすめします。",
+    "srvUserRule": "ユーザー名：2～32文字。ハングル音節・英字・数字・ピリオド(.)・アンダースコア(_)・ハイフン(-)のみ使用できます。空白・絵文字・単独の字母は使えません。"
   }
 };
 let currentLanguage='ko';

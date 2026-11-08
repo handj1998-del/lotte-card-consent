@@ -14,7 +14,7 @@
   and the local mode above is unchanged. Local encrypted records are never uploaded or deleted (no migration).
 - Stored in D1 `lotte-consent-reservations`: reservation no, name, phone, email, id, version, timestamps. Server rejects any other
   field and card-number-like values. Card data, expiry, signatures, PDFs are never sent.
-- Auth: one admin (`admin` by default). Password: PBKDF2-SHA256 100,000 iterations (Workers WebCrypto maximum), random salt,
+- Auth: one admin (`admin` by default). Username: NFC-normalised, 2–32 chars, only Hangul syllables U+AC00–U+D7A3, A–Z a–z 0–9 . _ - (no spaces, emoji, standalone jamo, other scripts). Password: PBKDF2-SHA256 100,000 iterations (Workers WebCrypto maximum), random salt,
   then HMAC-SHA256 with a server-only PEPPER secret. Session: random 256-bit token in a `__Host-` cookie (Secure, HttpOnly,
   SameSite=Strict), stored server-side as SHA-256; 30 min idle / 12 h max; the UI also signs out after 2 min idle, page hide,
   and after handing a record to the form. No CORS; writes require same Origin + `X-Requested-With`. All responses no-store.

@@ -24,6 +24,9 @@ async function hashKey(keyB64, saltHex, pepper) {
   return hex(await crypto.subtle.sign('HMAC', k, msg));
 }
 const KEY_RE = /^[A-Za-z0-9_-]{43}$/;
+// Username: NFC-normalised, 2–32 characters, only ASCII letters/digits . _ - and precomposed Hangul syllables (U+AC00–U+D7A3).
+const normUser = v => String(v || '').normalize('NFC').trim();
+const USER_RE = /^[A-Za-z0-9._\-\uAC00-\uD7A3]{2,32}$/;
 function same(a, b) { const x = enc.encode(String(a)), y = enc.encode(String(b)); let d = x.length ^ y.length; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x[i] | 0) ^ (y[i] | 0); return d === 0; }
 const SEC = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY', 'Content-Security-Policy': "frame-ancestors 'none'", 'Strict-Transport-Security': 'max-age=31536000' };
 function json(req, status, body, extra = {}) {
@@ -106,8 +109,8 @@ export async function handle(req, env, now = Date.now()) {
     if (lockedS) return json(req, 429, { error: 'locked', retryAt: lockedS });
     const b = await readJson(req); if (!b) return json(req, 400, { error: 'body' });
     if (!same(b.token || '', env.SETUP_TOKEN)) { await throttleFail(db, 'setup', now, 10); return json(req, 401, { error: 'bad_token' }); }
-    const u = String(b.username || '').trim(), key = String(b.key || '');
-    if (!/^[A-Za-z0-9._-]{3,32}$/.test(u)) return json(req, 400, { error: 'username' });
+    const u = normUser(b.username), key = String(b.key || '');
+    if (!USER_RE.test(u)) return json(req, 400, { error: 'username' });
     if (!KEY_RE.test(key)) return json(req, 400, { error: 'key' });
     const salt = hex(rand(16));
     const r = await db.prepare('INSERT OR IGNORE INTO admin (id, username, salt, iter, hash, created_at) VALUES (1, ?, ?, ?, ?, ?)').bind(u, salt, CLIENT_ITER, await hashKey(key, salt, env.PEPPER), now).run();
@@ -120,7 +123,7 @@ export async function handle(req, env, now = Date.now()) {
     const locked = Math.max(await throttleCheck(db, ipKey, now), await throttleCheck(db, 'global', now));
     if (locked) return json(req, 429, { error: 'locked', retryAt: locked });
     const b = await readJson(req); if (!b) return json(req, 400, { error: 'body' });
-    const ok = same(String(b.username || ''), admin.username) & same(KEY_RE.test(String(b.key || '')) ? await hashKey(String(b.key), admin.salt, env.PEPPER) : '', admin.hash);
+    const ok = same(normUser(b.username), admin.username) & same(KEY_RE.test(String(b.key || '')) ? await hashKey(String(b.key), admin.salt, env.PEPPER) : '', admin.hash);
     if (!ok) { await throttleFail(db, ipKey, now, MAX_FAILS); await throttleFail(db, 'global', now, GLOBAL_MAX_FAILS, GLOBAL_LOCK); return json(req, 401, { error: 'bad_credentials' }); }
     await db.prepare('DELETE FROM throttle WHERE key = ?').bind(ipKey).run();
     return newSession(env, now);

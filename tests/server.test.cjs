@@ -88,6 +88,25 @@ assert.equal((await call('GET','/api/reservations',{token:pc,now:t+31*60e3})).s,
 // setup race: two concurrent setups -> exactly one admin
 {const e2={DB:d1(),PEPPER:env.PEPPER,SETUP_TOKEN:env.SETUP_TOKEN,SETUP_UNTIL:String(t+3600e3)};const mk=k=>handle(new Request('https://api.example/api/setup',{method:'POST',headers:{Origin:ORIGIN,'X-Requested-With':'consent','Content-Type':'application/json'},body:JSON.stringify({token:e2.SETUP_TOKEN,username:'admin',key:k})}),e2,t);
  const rs=await Promise.all([mk(KEY),mk(BAD),mk(KEY)]);assert.deepEqual(rs.map(r=>r.status).sort(),[201,410,410]);assert.equal(e2.DB.raw.prepare('SELECT count(*) c FROM admin').get().c,1);}
+// Korean usernames (isolated DB): NFC, Hangul syllables + ASCII . _ -, 2-32; compat with ASCII derivation
+{assert.equal(await ConsentKdf.derive('admin',PW),KEY,'ASCII derivation unchanged');
+ const mkEnv=()=>({DB:d1(),PEPPER:env.PEPPER,SETUP_TOKEN:env.SETUP_TOKEN,SETUP_UNTIL:String(t+3600e3)});
+ const req=(e,p,body,cookie)=>handle(new Request('https://api.example'+p,{method:'POST',headers:{Origin:ORIGIN,'X-Requested-With':'consent','Content-Type':'application/json',...(cookie?{Cookie:cookie}:{}),'CF-Connecting-IP':'198.51.100.99'},body:JSON.stringify(body)}),e,t);
+ const SYN='Syn-'+rnd();
+ for(const bad of ['김','관 리자','관리자😀','ㄱㄴㄷ','관리자\u200b','x'.repeat(33),'관리자\u0000','аdmin','관리자!','\ud800ab']){const e=mkEnv();const r=await req(e,'/api/setup',{token:e.SETUP_TOKEN,username:bad,key:KEY});assert.equal(r.status,400,'reject '+JSON.stringify(bad));assert.equal((await r.json()).error,'username');}
+ for(const good of ['관리','관리자','김해.지점_01-a','가'.repeat(32),'ab']){const e=mkEnv();assert.equal((await req(e,'/api/setup',{token:e.SETUP_TOKEN,username:good,key:await ConsentKdf.derive(good,SYN)})).status,201,good);}
+ const e=mkEnv();const composed='관리자',decomposed=composed.normalize('NFD');assert.notEqual(composed,decomposed);
+ assert.equal(await ConsentKdf.derive(decomposed,SYN),await ConsentKdf.derive(composed,SYN),'NFC alias same key');
+ assert.equal((await req(e,'/api/setup',{token:e.SETUP_TOKEN,username:decomposed,key:await ConsentKdf.derive(decomposed,SYN)})).status,201);
+ assert.equal(e.DB.raw.prepare('SELECT username FROM admin').get().username,composed,'stored NFC');
+ const lg=await req(e,'/api/login',{username:composed,key:await ConsentKdf.derive(composed,SYN)});assert.equal(lg.status,200);
+ assert.equal((await req(e,'/api/login',{username:decomposed,key:await ConsentKdf.derive(decomposed,SYN)})).status,200,'NFD login alias');
+ assert.equal((await req(e,'/api/login',{username:'관리자 ',key:await ConsentKdf.derive(composed,SYN)})).status,200,'trim');
+ assert.equal((await req(e,'/api/login',{username:'관리',key:await ConsentKdf.derive('관리',SYN)})).status,401,'other name');
+ const ck=lg.headers.get('Set-Cookie').split(';')[0];
+ const NEW2=await ConsentKdf.derive(composed,'Syn2-'+rnd());
+ assert.equal((await req(e,'/api/password',{current:await ConsentKdf.derive(composed,SYN),next:NEW2},ck)).status,200,'korean pw change');
+ assert.equal((await req(e,'/api/login',{username:composed,key:NEW2})).status,200);}
 // storage contains only allowed columns
 assert.deepEqual(env.DB.raw.prepare('PRAGMA table_info(reservations)').all().map(c=>c.name),['id','res_no','name','phone','email','version','created_at','updated_at']);
 const src=fs.readFileSync(path.join(root,'worker/index.mjs'),'utf8');assert(!/console\./.test(src),'no logging');assert(!/Access-Control-Allow/.test(src),'no CORS');
