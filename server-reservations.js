@@ -2,6 +2,12 @@
 // Shared (server) reservations. Active ONLY when this page is served by the reservations Worker (same origin /api/status).
 // Session = HttpOnly __Host- cookie set by the server; this script never sees or stores a token or password.
 // Server keeps only reservation no, name, phone, email. Card data, expiry, signatures and PDFs are never sent.
+// Password -> 256-bit key in the browser (PBKDF2-SHA256, 600,000 iterations, domain-separated username salt).
+// Only this key is sent; the server adds its own random salt + secret pepper (HMAC). Must match worker CLIENT_ITER.
+const ConsentKdf={ITER:600000,async derive(username,password){const e=new TextEncoder();const base=await crypto.subtle.importKey('raw',e.encode(password),'PBKDF2',false,['deriveBits']);
+  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:e.encode('lotte-consent-reservations|v1|'+String(username).trim().toLowerCase()),iterations:ConsentKdf.ITER,hash:'SHA-256'},base,256);
+  return btoa(String.fromCharCode(...new Uint8Array(bits))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}};
+if(typeof module!=='undefined')module.exports={ConsentKdf};
 if(typeof document!=='undefined')(function(){
   const $=id=>document.getElementById(id),IDLE_MS=120000;let on=false,idle=null,next=null,items=[],editing=null,busy=false;
   const msg=(k,x)=>window.consentResMsg(k,x),stage=n=>window.consentResStage(n);
@@ -33,16 +39,18 @@ if(typeof document!=='undefined')(function(){
   $('srvLogout').addEventListener('click',()=>logout(false));
   for(const b of document.querySelectorAll('.srv-cancel'))b.addEventListener('click',()=>{wipe();stage('resLocked');msg('');});
   async function enter(){on=true;stage('srvAdmin');msg('');touch();await load(false);}
-  $('srvLogin').addEventListener('submit',async e=>{e.preventDefault();const u=$('srvUser').value.trim(),p=$('srvPass').value;$('srvPass').value='';let x;try{x=await api('POST','api/login',{username:u,password:p});}catch{msg('srvNetErr');return;}
+  $('srvLogin').addEventListener('submit',async e=>{e.preventDefault();const u=$('srvUser').value.trim(),p=$('srvPass').value;$('srvPass').value='';let x;try{x=await api('POST','api/login',{username:u,key:await ConsentKdf.derive(u,p)});}catch{msg('srvNetErr');return;}
     if(x.s===200)return enter();msg(x.s===429?'srvLocked':x.s===401?'srvBadLogin':'srvNetErr');});
   $('srvSetupForm').addEventListener('submit',async e=>{e.preventDefault();const tok=$('srvToken').value.trim(),u=$('srvNewUser').value.trim(),a=$('srvNewPass').value,b=$('srvNewPass2').value;$('srvNewPass').value=$('srvNewPass2').value='';
-    if(a.length<12||a.length>128){msg('srvPassRule');return;}if(a!==b){msg('srvMismatch');return;}let x;try{x=await api('POST','api/setup',{token:tok,username:u,password:a});}catch{msg('srvNetErr');return;}$('srvToken').value='';
+    if(a.length<12||a.length>128){msg('srvPassRule');return;}if(a!==b){msg('srvMismatch');return;}let x;try{x=await api('POST','api/setup',{token:tok,username:u,key:await ConsentKdf.derive(u,a)});}catch{msg('srvNetErr');return;}$('srvToken').value='';
     if(x.s===201)return enter();msg(x.s===429?'srvLocked':x.s===400?'srvPassRule':'srvSetupBad');});
   $('srvOpenBtn').addEventListener('click',async()=>{msg('');let x;try{x=await api('GET','api/status');}catch{msg('srvNetErr');return;}if(x.s!==200){msg('srvNotReady');return;}
     if(x.j.configured){try{const s=await api('GET','api/session');if(s.s===200)return enter();}catch{}stage('srvLogin');$('srvPass').focus();}else if(x.j.setupOpen){stage('srvSetup');$('srvToken').focus();}else msg('srvNotReady');});
   $('resScreen').addEventListener('input',touch);
   window.addEventListener('pagehide',()=>logout(true));document.addEventListener('visibilitychange',()=>{if(document.hidden&&on){logout(true);stage('resLocked');}});
   document.addEventListener('languagechange-consent',()=>{if(on)render();});
+  // On the Worker origin the separate same-device (PIN) vault is hidden: browser storage is per-origin, so tablet records
+  // stay on the GitHub Pages address untouched and are not mixed with the shared server list.
   // Show the entry point only when this origin really hosts the API (GitHub Pages has no /api -> stays hidden, local mode unchanged).
-  fetch('api/status',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok&&/json/.test(r.headers.get('Content-Type')||'')?r.json():null).then(j=>{if(j&&typeof j.configured==='boolean')$('srvOpenBtn').hidden=false;}).catch(()=>{});
+  fetch('api/status',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok&&/json/.test(r.headers.get('Content-Type')||'')?r.json():null).then(j=>{if(j&&typeof j.configured==='boolean'){$('srvOpenBtn').hidden=false;$('resAdminBtn').hidden=true;}}).catch(()=>{});
 })();

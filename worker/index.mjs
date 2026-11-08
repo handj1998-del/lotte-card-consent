@@ -4,7 +4,11 @@
 // Same-origin design: this Worker serves the app (proxied read-only from GitHub Pages) AND the API, so the session is a
 // first-party __Host- cookie (Secure, HttpOnly, SameSite=Strict). No CORS, no token in JS/localStorage.
 const UPSTREAM = 'https://handj1998-del.github.io/lotte-card-consent';
-const ITER_DEFAULT = 100000;     // PBKDF2-SHA256 (Workers WebCrypto max 100k) + HMAC with server-only PEPPER; override via env.PBKDF2_ITER
+// Password hashing is split (server-relief): the browser runs PBKDF2-SHA256 with CLIENT_ITER iterations over the password
+// (salt = domain-separated username) and sends only the 256-bit derived key. The server stores
+// HMAC-SHA256(PEPPER, random 16-byte salt || key) — ~1 ms CPU, fits Workers Free. Stolen DB + pepper still costs
+// CLIENT_ITER PBKDF2 rounds per guess. Keep CLIENT_ITER in sync with server-reservations.js.
+const CLIENT_ITER = 600000;
 const COOKIE = '__Host-lcr_sid';
 const SESSION_IDLE = 30 * 60e3, SESSION_MAX = 12 * 3600e3;
 const MAX_FAILS = 5, WINDOW = 15 * 60e3, LOCK = 15 * 60e3, GLOBAL_MAX_FAILS = 50;
@@ -13,12 +17,13 @@ const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')
 const unhex = s => Uint8Array.from(s.match(/../g).map(h => parseInt(h, 16)));
 const rand = n => crypto.getRandomValues(new Uint8Array(n));
 async function sha256(s) { return hex(await crypto.subtle.digest('SHA-256', enc.encode(s))); }
-async function hashPassword(pw, saltHex, iter, pepper) {
-  const base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: unhex(saltHex), iterations: iter, hash: 'SHA-256' }, base, 256);
+async function hashKey(keyB64, saltHex, pepper) {
+  const kb = Uint8Array.from(atob(keyB64.replace(/-/g, '+').replace(/_/g, '/') + '='), c => c.charCodeAt(0));
+  const salt = unhex(saltHex), msg = new Uint8Array(salt.length + kb.length); msg.set(salt); msg.set(kb, salt.length);
   const k = await crypto.subtle.importKey('raw', enc.encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  return hex(await crypto.subtle.sign('HMAC', k, bits));
+  return hex(await crypto.subtle.sign('HMAC', k, msg));
 }
+const KEY_RE = /^[A-Za-z0-9_-]{43}$/;
 function same(a, b) { const x = enc.encode(String(a)), y = enc.encode(String(b)); let d = x.length ^ y.length; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x[i] | 0) ^ (y[i] | 0); return d === 0; }
 const SEC = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY', 'Content-Security-Policy': "frame-ancestors 'none'", 'Strict-Transport-Security': 'max-age=31536000' };
 function json(req, status, body, extra = {}) {
@@ -27,7 +32,6 @@ function json(req, status, body, extra = {}) {
 const setCookie = (tok, maxAge) => ({ 'Set-Cookie': `${COOKIE}=${tok}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${maxAge}` });
 const clearCookie = () => setCookie('', 0);
 function cookieTok(req) { const m = (req.headers.get('Cookie') || '').match(/(?:^|;\s*)__Host-lcr_sid=([A-Za-z0-9_-]{43})(?:;|$)/); return m ? m[1] : null; }
-const iterOf = env => { const n = parseInt(env.PBKDF2_ITER || '', 10); return n >= 10000 && n <= 100000 ? n : ITER_DEFAULT; };
 async function proxy(req, url) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return new Response('Method not allowed', { status: 405, headers: SEC });
   if (url.pathname.includes('..') || url.pathname.startsWith('/worker/') || url.pathname.startsWith('/tests/') || url.pathname.startsWith('/.')) return new Response('Not found', { status: 404, headers: SEC });
@@ -94,7 +98,7 @@ export async function handle(req, env, now = Date.now()) {
   if (!env.DB || !env.PEPPER || env.PEPPER.length < 32) return json(req, 503, { error: 'not_configured' });
   const db = env.DB;
   const admin = await db.prepare('SELECT username, salt, iter, hash FROM admin WHERE id = 1').first();
-  if (p === '/api/status' && req.method === 'GET') return json(req, 200, { configured: !!admin, setupOpen: !admin && setupOpen(env, now) });
+  if (p === '/api/status' && req.method === 'GET') return json(req, 200, { configured: !!admin, setupOpen: !admin && setupOpen(env, now), kdf: { alg: 'PBKDF2-SHA256', iter: CLIENT_ITER } });
   if (p === '/api/setup' && req.method === 'POST') {
     if (admin) return json(req, 410, { error: 'already_configured' });
     if (!setupOpen(env, now)) return json(req, 503, { error: 'setup_closed' });
@@ -102,11 +106,11 @@ export async function handle(req, env, now = Date.now()) {
     if (lockedS) return json(req, 429, { error: 'locked', retryAt: lockedS });
     const b = await readJson(req); if (!b) return json(req, 400, { error: 'body' });
     if (!same(b.token || '', env.SETUP_TOKEN)) { await throttleFail(db, 'setup', now, 10); return json(req, 401, { error: 'bad_token' }); }
-    const u = String(b.username || '').trim(), pw = String(b.password || '');
+    const u = String(b.username || '').trim(), key = String(b.key || '');
     if (!/^[A-Za-z0-9._-]{3,32}$/.test(u)) return json(req, 400, { error: 'username' });
-    if (pw.length < 12 || pw.length > 128) return json(req, 400, { error: 'password_length' });
+    if (!KEY_RE.test(key)) return json(req, 400, { error: 'key' });
     const salt = hex(rand(16));
-    const r = await db.prepare('INSERT OR IGNORE INTO admin (id, username, salt, iter, hash, created_at) VALUES (1, ?, ?, ?, ?, ?)').bind(u, salt, iterOf(env), await hashPassword(pw, salt, iterOf(env), env.PEPPER), now).run();
+    const r = await db.prepare('INSERT OR IGNORE INTO admin (id, username, salt, iter, hash, created_at) VALUES (1, ?, ?, ?, ?, ?)').bind(u, salt, CLIENT_ITER, await hashKey(key, salt, env.PEPPER), now).run();
     if (!r.meta || r.meta.changes !== 1) return json(req, 410, { error: 'already_configured' });
     return newSession(env, now, 201);
   }
@@ -116,7 +120,7 @@ export async function handle(req, env, now = Date.now()) {
     const locked = Math.max(await throttleCheck(db, ipKey, now), await throttleCheck(db, 'global', now));
     if (locked) return json(req, 429, { error: 'locked', retryAt: locked });
     const b = await readJson(req); if (!b) return json(req, 400, { error: 'body' });
-    const ok = same(String(b.username || ''), admin.username) & same(await hashPassword(String(b.password || '').slice(0, 128), admin.salt, admin.iter, env.PEPPER), admin.hash);
+    const ok = same(String(b.username || ''), admin.username) & same(KEY_RE.test(String(b.key || '')) ? await hashKey(String(b.key), admin.salt, env.PEPPER) : '', admin.hash);
     if (!ok) { await throttleFail(db, ipKey, now, MAX_FAILS); await throttleFail(db, 'global', now, GLOBAL_MAX_FAILS); return json(req, 401, { error: 'bad_credentials' }); }
     await db.prepare('DELETE FROM throttle WHERE key = ?').bind(ipKey).run();
     return newSession(env, now);

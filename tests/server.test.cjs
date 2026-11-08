@@ -6,41 +6,43 @@ function d1(){const db=new DatabaseSync(':memory:');db.exec(fs.readFileSync(path
  return{prepare(sql){let args=[];const st={bind(...a){args=a;return st;},async first(){return db.prepare(sql).get(...args)||null;},async all(){return{results:db.prepare(sql).all(...args)};},async run(){const r=db.prepare(sql).run(...args);return{meta:{changes:Number(r.changes)}};}};return st;},raw:db};}
 const ORIGIN='https://api.example';
 (async()=>{
-const {handle}=await import(path.join(root,'worker/index.mjs'));
+const {handle}=await import(path.join(root,'worker/index.mjs'));const {ConsentKdf}=require(path.join(root,'server-reservations.js'));
 const rnd=()=>crypto.randomBytes(24).toString('base64url');
-const env={DB:d1(),PEPPER:rnd()+rnd(),SETUP_TOKEN:rnd()+rnd(),SETUP_UNTIL:String(1_800_000_000_000+86400e3),PBKDF2_ITER:'100000'};const PW='Synthetic-'+rnd();
+const env={DB:d1(),PEPPER:rnd()+rnd(),SETUP_TOKEN:rnd()+rnd(),SETUP_UNTIL:String(1_800_000_000_000+86400e3)};const PW='Synthetic-'+rnd();let KEY;
 let t=1_800_000_000_000;
 const call=async(method,p,{body,token,origin=ORIGIN,ip='198.51.100.7',now=t,xrw='consent'}={})=>{const h={'CF-Connecting-IP':ip};if(origin)h.Origin=origin;if(xrw)h['X-Requested-With']=xrw;if(body!==undefined)h['Content-Type']='application/json';if(token)h['Cookie']='__Host-lcr_sid='+token;const r=await handle(new Request('https://api.example'+p,{method,headers:h,body:body===undefined?undefined:JSON.stringify(body)}),env,now);const sc=r.headers.get('Set-Cookie')||'';const m=sc.match(/__Host-lcr_sid=([A-Za-z0-9_-]{43})/);if(sc)assert.match(sc,/; Path=\/; Secure; HttpOnly; SameSite=Strict; Max-Age=\d+$/);const j=await r.json().catch(()=>null);if(j)assert(!JSON.stringify(j).match(/[A-Za-z0-9_-]{43}/),'no token in body');return{s:r.status,h:r.headers,j,cookie:m?m[1]:null};};
+KEY=await ConsentKdf.derive('admin',PW);const BAD=await ConsentKdf.derive('admin','wrong-password-x');
+assert.equal(KEY.length,43);assert.equal(KEY,await ConsentKdf.derive(' Admin ',PW),'username normalised');
 // closed by default
 assert.equal((await handle(new Request('https://x/api/status'),{DB:env.DB},t)).status,503,'no pepper -> closed');
 let r=await call('GET','/api/status');assert.equal(r.j.configured,false);assert.equal(r.h.get('Cache-Control'),'no-store');assert.equal(r.h.get('Access-Control-Allow-Origin'),null,'no CORS');assert.equal(r.j.setupOpen,true);assert.equal(r.h.get('X-Frame-Options'),'DENY');
-for(const [m,p] of [['GET','/api/reservations'],['POST','/api/login']])assert.equal((await call(m,p,{body:m==='POST'?{username:'admin',password:PW}:undefined})).s,503);
+for(const [m,p] of [['GET','/api/reservations'],['POST','/api/login']])assert.equal((await call(m,p,{body:m==='POST'?{username:'admin',key:KEY}:undefined})).s,503);
 assert.equal((await call('GET','/api/status',{origin:'https://evil.example'})).s,403,'foreign origin');
 // CSRF: state changes need same Origin + X-Requested-With
-assert.equal((await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',password:PW},xrw:null})).s,403);
-assert.equal((await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',password:PW},origin:null})).s,403);
+assert.equal((await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',key:KEY},xrw:null})).s,403);
+assert.equal((await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',key:KEY},origin:null})).s,403);
 // setup window: closed without token, without/expired/over-24h SETUP_UNTIL
-for(const e of [{SETUP_TOKEN:undefined},{SETUP_UNTIL:undefined},{SETUP_UNTIL:String(t-1)},{SETUP_UNTIL:String(t+48*3600e3)},{SETUP_TOKEN:'short'}]){const saved={...env};Object.assign(env,e);const st=await call('GET','/api/status');assert.equal(st.j.setupOpen,false);assert.equal((await call('POST','/api/setup',{body:{token:saved.SETUP_TOKEN,username:'admin',password:PW}})).j.error,'setup_closed');Object.assign(env,saved);}
+for(const e of [{SETUP_TOKEN:undefined},{SETUP_UNTIL:undefined},{SETUP_UNTIL:String(t-1)},{SETUP_UNTIL:String(t+48*3600e3)},{SETUP_TOKEN:'short'}]){const saved={...env};Object.assign(env,e);const st=await call('GET','/api/status');assert.equal(st.j.setupOpen,false);assert.equal((await call('POST','/api/setup',{body:{token:saved.SETUP_TOKEN,username:'admin',key:KEY}})).j.error,'setup_closed');Object.assign(env,saved);}
 // setup needs token; first visitor cannot claim
-assert.equal((await call('POST','/api/setup',{body:{token:'x',username:'admin',password:PW}})).s,401);
-assert.equal((await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',password:'short'}})).s,400);
-r=await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',password:PW}});assert.equal(r.s,201);assert(r.cookie);assert.equal((await call('GET','/api/status')).j.setupOpen,false);
-assert.equal((await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',password:PW}})).s,410,'setup one-time');
-const adminRow=env.DB.raw.prepare('SELECT * FROM admin').get();assert(!JSON.stringify(adminRow).includes(PW));assert.equal(adminRow.hash.length,64);assert.equal(adminRow.iter,100000);
+assert.equal((await call('POST','/api/setup',{body:{token:'x',username:'admin',key:KEY}})).s,401);
+assert.equal((await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',key:'short'}})).s,400);
+r=await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',key:KEY}});assert.equal(r.s,201);assert(r.cookie);assert.equal((await call('GET','/api/status')).j.setupOpen,false);
+assert.equal((await call('POST','/api/setup',{body:{token:env.SETUP_TOKEN,username:'admin',key:KEY}})).s,410,'setup one-time');
+const adminRow=env.DB.raw.prepare('SELECT * FROM admin').get();assert(!JSON.stringify(adminRow).includes(PW)&&!JSON.stringify(adminRow).includes(KEY));assert.equal(adminRow.hash.length,64);assert.equal(adminRow.iter,600000);assert.equal(adminRow.salt.length,32);
 // auth required everywhere
 for(const [m,p] of [['GET','/api/reservations'],['POST','/api/reservations'],['GET','/api/reservations/00000000-0000-4000-8000-000000000000'],['POST','/api/logout']])assert.equal((await call(m,p,{body:m==='POST'?{}:undefined})).s,401,m+p);
 assert.equal((await call('GET','/api/reservations',{token:'A'.repeat(43)})).s,401);
 assert.equal((await call('GET','/api/reservations',{origin:'https://evil.example'})).s,403);
 // wrong password + throttling
-for(let i=0;i<5;i++)assert.equal((await call('POST','/api/login',{body:{username:'admin',password:'wrong-'+i}})).s,401);
-assert.equal((await call('POST','/api/login',{body:{username:'admin',password:PW}})).s,429,'locked after 5 fails');
-assert.equal((await call('POST','/api/login',{body:{username:'admin',password:PW},ip:'198.51.100.8'})).s,200,'other device ok');
+for(let i=0;i<5;i++)assert.equal((await call('POST','/api/login',{body:{username:'admin',key:BAD}})).s,401);
+assert.equal((await call('POST','/api/login',{body:{username:'admin',key:KEY}})).s,429,'locked after 5 fails');
+assert.equal((await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'198.51.100.8'})).s,200,'other device ok');
 // two independent sessions (PC + tablet)
-const pc=(await call('POST','/api/login',{body:{username:'admin',password:PW},ip:'203.0.113.10'})).cookie;
-const tab=(await call('POST','/api/login',{body:{username:'admin',password:PW},ip:'203.0.113.11'})).cookie;
+const pc=(await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'203.0.113.10'})).cookie;
+const tab=(await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'203.0.113.11'})).cookie;
 assert.equal((await call('PUT','/api/reservations/00000000-0000-4000-8000-000000000000',{token:pc,body:{},xrw:null})).s,403,'csrf on authed write');
 // CPU: one 100k PBKDF2 login in Node (reported, not a Workers measurement)
-{const a=process.cpuUsage();await call('POST','/api/login',{body:{username:'admin',password:PW},ip:'203.0.113.12'});const u=process.cpuUsage(a);console.log('node login cpu ms ~',Math.round((u.user+u.system)/1000));}
+{const a=process.cpuUsage();await call('POST','/api/login',{body:{username:'admin',key:KEY},ip:'203.0.113.12'});const u=process.cpuUsage(a);assert((u.user+u.system)/1000<10,'server login CPU < 10 ms in node');}
 assert.notEqual(pc,tab);
 const rec={no:'TEST-RES-0001',name:'TEST USER',phone:'+1 555 0100',email:'test.user@example.invalid'};
 r=await call('POST','/api/reservations',{token:pc,body:rec});assert.equal(r.s,201);const id=r.j.id;
