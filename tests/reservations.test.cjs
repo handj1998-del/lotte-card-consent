@@ -33,7 +33,7 @@ assert(!/localStorage|sessionStorage|indexedDB/.test(cj+read('guide.js')),'form/
 assert(/function startCustomer\(r\)\{if\(sameCustomer\(r\)\)\{resumeDraft\(\);return true;\}if\(formDirty\(\)&&!confirm\(t\('resClearConfirm'\)\)\)/.test(js),'confirm before clearing another customer');
 assert(/clearCustomerForm\(\);if\(r\)fill\(r\);lock\(\);/.test(js),'clear -> fill -> lock on handoff');
 assert(/function remove\(id\)\{if\(!confirm\(t\('resDeleteConfirm'\)\)\)return;/.test(js),'delete confirm');
-assert(js.includes("window.addEventListener('pagehide',lock)")&&js.includes('document.hidden)lock()')&&/IDLE_MS=\d+/.test(js));
+assert(js.includes("window.addEventListener('pagehide',lockLocal)")&&js.includes('document.hidden)lockLocal()')&&/IDLE_MS=\d+/.test(js));
 assert(/\$\('resList'\)\.replaceChildren\(\)/.test(js.match(/function lock\(\)\{.*?\}/s)[0]),'lock wipes decrypted list DOM');
 assert(js.includes("set('예약번호',r.no);set('임차인 이름',r.name);set('전화번호',r.phone);set('이메일',r.email)"));
 for(const id of ['resPin','resNewPin','resNewPin2','resCurPin','resChPin','resChPin2'])assert(new RegExp(`id="${id}"[^>]*type="password"`).test(html),id);

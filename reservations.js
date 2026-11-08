@@ -31,7 +31,13 @@ if(typeof document!=='undefined')(function(){
   function setMsg(key,extra){const m=$('resMsg');m.textContent=key?t(key)+(extra||''):'';}
   function stage(name){for(const id of ['resLocked','resSetup','resUnlock','resAdmin','srvSetup','srvLogin','srvAdmin'])$(id).hidden=id!==name;updateResume();}
   function lock(){session=null;editingId=null;clearTimeout(idle);$('resList').replaceChildren();$('resForm').reset();$('resForm').hidden=true;$('resPinForm').reset();$('resPinForm').hidden=true;for(const f of document.querySelectorAll('#resScreen input[type=password]'))f.value='';stage('resLocked');}
-  function touch(){if(!session)return;clearTimeout(idle);idle=setTimeout(()=>{lock();setMsg('resAutoLocked');},IDLE_MS);}
+  // Local PIN vault auto-lock (tab hidden / page hide / idle) touches ONLY the local vault and its own screens/inputs.
+  // It must never hide or reset the shared-server screens (srvLogin/srvAdmin/srvForm) or the customer form.
+  const LOCAL_STAGES=['resSetup','resUnlock','resAdmin'],LOCAL_PW=['resPin','resNewPin','resNewPin2','resCurPin','resChPin','resChPin2'];
+  function lockLocal(){const wasOpen=!!session||LOCAL_STAGES.some(id=>!$(id).hidden);session=null;editingId=null;clearTimeout(idle);if(!wasOpen)return false;
+    $('resList').replaceChildren();$('resForm').reset();$('resForm').hidden=true;$('resPinForm').reset();$('resPinForm').hidden=true;for(const id of LOCAL_PW)$(id).value='';
+    if(LOCAL_STAGES.some(id=>!$(id).hidden))stage('resLocked');return true;}
+  function touch(){if(!session)return;clearTimeout(idle);idle=setTimeout(()=>{if(lockLocal())setMsg('resAutoLocked');},IDLE_MS);}
   function renderList(){const list=$('resList');list.replaceChildren();if(!session.records.length){const p=document.createElement('li');p.className='res-empty';p.textContent=t('resEmpty');list.append(p);return;}
     for(const r of session.records){const li=document.createElement('li');li.className='res-item';const label=document.createElement('span');label.className='res-label';label.textContent=`${r.no} · ${ReservationVault.maskName(r.name)}`;
       const sel=btn('resSelect','res-primary',()=>select(r.id)),ed=btn('resEdit','',()=>openForm(r)),del=btn('resDelete','res-danger',()=>remove(r.id));li.append(label,sel,ed,del);list.append(li);}}
@@ -64,7 +70,7 @@ if(typeof document!=='undefined')(function(){
   $('resPinCancel').addEventListener('click',()=>{$('resPinForm').reset();$('resPinForm').hidden=true;});
   $('resPinForm').addEventListener('submit',async e=>{e.preventDefault();touch();const cur=$('resCurPin').value,a=$('resChPin').value,b=$('resChPin2').value;e.target.reset();if(!pinOk(a)){setMsg('resPinRule');return;}if(a!==b){setMsg('resPinMismatch');return;}await withBackoff(async()=>{await ReservationVault.unlock(cur);await ReservationVault.changePin(session,a);e.target.hidden=true;setMsg('resPinChanged');});});
   $('resScreen').addEventListener('input',touch);
-  window.addEventListener('pagehide',lock);document.addEventListener('visibilitychange',()=>{if(document.hidden)lock();});
+  window.addEventListener('pagehide',lockLocal);document.addEventListener('visibilitychange',()=>{if(document.hidden)lockLocal();});
   $('resBack').addEventListener('click',()=>{lock();setMsg('');window.consentShowView('reserve');});
   document.addEventListener('languagechange-consent',()=>{if(session)renderList();});
   window.consentStartCustomer=startCustomer;window.consentResStage=stage;window.consentResMsg=setMsg;
