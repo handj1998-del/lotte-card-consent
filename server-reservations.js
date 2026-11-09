@@ -48,6 +48,8 @@ if(typeof document!=='undefined')(function(){
     try{const ss=await api('GET','api/session');if(ss.s!==200){busy=false;return expired();}const u=ss.j.username;x=await api('POST','api/password',{current:await ConsentKdf.derive(u,c),next:await ConsentKdf.derive(u,a)});}catch{x=null;}finally{busy=false;}
     if(!x){msg('srvNetErr');return;}if(x.s===200){wipe();stage('srvLogin');msg('srvPwChanged');return;}if(x.s===401&&x.j.error==='auth')return expired();msg(x.s===429?'srvLocked':x.s===401?'srvBadCurrent':'srvNetErr');});
   for(const b of document.querySelectorAll('.srv-cancel'))b.addEventListener('click',()=>{wipe();stage('resLocked');msg('');});
+  // 예약 없이 작성 from the shared list: same flow as picking a reservation (draft prompt, PC review stop), with no record.
+  $('srvNoBooking').addEventListener('click',()=>{if(window.consentStartCustomer(null)){on=false;$('srvList').replaceChildren();items=[];}});
   async function enter(){on=true;stage('srvAdmin');msg('');touch();await load(false);}
   $('srvLogin').addEventListener('submit',async e=>{e.preventDefault();const u=$('srvUser').value.normalize('NFC').trim(),p=$('srvPass').value;$('srvPass').value='';let x;try{x=await api('POST','api/login',{username:u,key:await ConsentKdf.derive(u,p)});}catch{msg('srvNetErr');return;}
     if(x.s===200)return enter();msg(x.s===429?'srvLocked':x.s===401?'srvBadLogin':'srvNetErr');});

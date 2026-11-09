@@ -57,7 +57,7 @@ if(typeof document!=='undefined')(function(){
   async function withBackoff(fn){const now=Date.now();if(now<lockUntil){setMsg('resWait',` (${Math.ceil((lockUntil-now)/1000)}s)`);return;}try{await fn();failures=0;}catch(e){if(e.message!=='badpin')throw e;failures++;lockUntil=Date.now()+Math.min(60000,1000*2**Math.max(0,failures-2));setMsg('resBadPin');}}
   const pinOk=v=>/^\d{4,12}$/.test(v);
   $('resAdminBtn').addEventListener('click',()=>{setMsg('');if(ReservationVault.exists()){stage('resUnlock');$('resPin').focus();}else{stage('resSetup');$('resNewPin').focus();}});
-  $('resNoBooking').addEventListener('click',()=>startCustomer(null));
+  $('resNoBooking').addEventListener('click',()=>startCustomer(null));$('resNoBookingAdmin').addEventListener('click',()=>startCustomer(null));
   $('resResume').addEventListener('click',resumeDraft);
   $('resSetup').addEventListener('submit',async e=>{e.preventDefault();const a=$('resNewPin').value,b=$('resNewPin2').value;if(!pinOk(a)){setMsg('resPinRule');return;}if(a!==b){setMsg('resPinMismatch');return;}session=await ReservationVault.setup(a);$('resNewPin').value=$('resNewPin2').value='';stage('resAdmin');renderList();touch();setMsg('resSetupDone');});
   $('resUnlock').addEventListener('submit',async e=>{e.preventDefault();const pin=$('resPin').value;$('resPin').value='';await withBackoff(async()=>{session=await ReservationVault.unlock(pin);stage('resAdmin');renderList();touch();setMsg('');});});
