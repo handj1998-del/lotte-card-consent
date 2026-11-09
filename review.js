@@ -46,23 +46,35 @@ if(typeof document!=='undefined')(function(){
     else if(!pub&&custStart&&Date.now()<custStart+SHARE_MS)startShare({quiet:true,until:custStart+SHARE_MS});};
   // ---------- PC: read-only viewer ----------
   let view=null;// {ws,kp,key,lastAt}
-  function clearView(){$('rvFields').replaceChildren();$('rvSigs').replaceChildren();$('rvChecks').replaceChildren();$('rvPages').querySelectorAll('canvas').forEach(c=>{c.width=c.height=1;});$('rvPages').replaceChildren();}
+  function clearView(){renderSeq++;pending=null;$('rvFields').replaceChildren();$('rvSigs').replaceChildren();$('rvChecks').replaceChildren();$('rvPages').querySelectorAll('canvas').forEach(c=>{c.width=c.height=1;});$('rvPages').replaceChildren();}
   function viewState(k,vars){const s=$('rvState');s.dataset.state=k;s.textContent=t(k,vars||{});}
   const label=l=>{const k=fieldKeys[l];return k?t(k)+(/운전자/.test(l)?' · '+l:''):l;};
-  let renderSeq=0;
-  async function renderDoc(snap){const seq=++renderSeq;if(snap.n!==fields.length)return;// same app version only
-    const saved={f:fields.map(f=>f.el.value),c:choices.map(c=>c.el.checked),s:signatures.map(s=>s.image)};const canvases=[];
-    try{const imgs=await Promise.all(snap.sigs.map(src=>{if(!src||!/^data:image\/png;base64,/.test(src))return null;const i=new Image();i.src=src;return i.decode().then(()=>i,()=>null);}));
-      fields.forEach((f,i)=>{f.el.value=snap.fields[i][1];});choices.forEach((c,i)=>{c.el.checked=!!snap.choices[i];});signatures.forEach((s,i)=>{s.image=imgs[i];});
+  // The PC draws the tablet's snapshot by briefly loading it into its own (hidden) form and using the same page renderer as the PDF.
+  // Renders are serialized and coalesced to the newest snapshot: overlapping renders (snapshots arriving while fonts/page images still
+  // load) used to restore each other's values mid-draw, so pages showed PC/stale values and the PC form kept tablet data.
+  // Fonts, page images and signatures are loaded BEFORE the swap so the swap->draw->restore window has no network waits.
+  let renderSeq=0,pending=null,rendering=false;
+  function renderDoc(snap){pending=snap;if(!rendering)drain();}
+  async function drain(){rendering=true;try{while(pending&&view){const snap=pending;pending=null;await renderOnce(snap);}}finally{rendering=false;}}
+  async function renderOnce(snap){const seq=++renderSeq;if(snap.n!==fields.length)return;// same app version only
+    let canvases=[],imgs;
+    try{await loadDocFonts();await pageImage(1);await pageImage(2);
+      imgs=await Promise.all(snap.sigs.map(src=>{if(!src||!/^data:image\/png;base64,/.test(src))return null;const i=new Image();i.src=src;return i.decode().then(()=>i,()=>null);}));}
+    catch{if(view&&!pending){setTimeout(()=>{if(view&&!pending&&!rendering){pending=snap;drain();}},3000);}return;}// retry once resources load
+    if(pending||!view)return;// newer snapshot already waiting
+    const saved={f:fields.map(f=>f.el.value),c:choices.map(c=>c.el.checked),s:signatures.map(s=>s.image)};
+    try{fields.forEach((f,i)=>{f.el.value=snap.fields[i][1];});choices.forEach((c,i)=>{c.el.checked=!!snap.choices[i];});signatures.forEach((s,i)=>{s.image=imgs[i];});
       for(let p=1;p<=2;p++)canvases.push(await renderPage(p));}
-    catch{}finally{fields.forEach((f,i)=>{f.el.value=saved.f[i];});choices.forEach((c,i)=>{c.el.checked=saved.c[i];});signatures.forEach((s,i)=>{s.image=saved.s[i];});}
-    if(seq!==renderSeq||!view){canvases.forEach(c=>{c.width=c.height=1;});return;}
+    catch{canvases.forEach(c=>{c.width=c.height=1;});canvases=[];}
+    finally{fields.forEach((f,i)=>{f.el.value=saved.f[i];});choices.forEach((c,i)=>{c.el.checked=saved.c[i];});signatures.forEach((s,i)=>{s.image=saved.s[i];});}
+    if(seq!==renderSeq||!view||canvases.length!==2){canvases.forEach(c=>{c.width=c.height=1;});return;}
     const area=$('rvPages');area.querySelectorAll('canvas').forEach(c=>{c.width=c.height=1;});area.replaceChildren(...canvases);}
   function show(snap){const tb=$('rvFields');tb.replaceChildren();for(const [l,v] of snap.fields){if(!v)continue;const tr=document.createElement('tr'),th=document.createElement('th'),td=document.createElement('td');th.textContent=label(l);td.textContent=v;if(l==='카드번호')td.className='rv-card';tr.append(th,td);tb.append(tr);}
     if(!tb.children.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=2;td.textContent=t('rvBlank');tr.append(td);tb.append(tr);}
     const ck=$('rvChecks');ck.replaceChildren();const item=(k,state)=>{const li=document.createElement('li');li.dataset.state=state;li.textContent=t(k)+': '+t(state==='valid'||state===true?'rvOk':state==='empty'||state===false?'rvEmpty':'rvBad');ck.append(li);};
     item('rvNameLbl',snap.check.name);item('rvCardLbl',snap.check.card);item('rvExpiryLbl',snap.check.expiry);item('rvSignLbl',snap.check.renterSign);
     const sg=$('rvSigs');sg.replaceChildren();snap.sigs.forEach((src,i)=>{if(!src||!/^data:image\/png;base64,/.test(src)||i===1)return;const fig=document.createElement('figure'),img=document.createElement('img'),cap=document.createElement('figcaption');img.src=src;img.alt=t(signatureKey(signatures[i]));cap.textContent=t(signatureKey(signatures[i]));fig.append(img,cap);sg.append(fig);});
+    if(!$('rvPages').querySelector('canvas')&&!$('rvPages').querySelector('.rv-loading')){const p=document.createElement('p');p.className='rv-loading';p.setAttribute('data-i18n','rvLoadingDoc');p.textContent=t('rvLoadingDoc');$('rvPages').append(p);}
     renderDoc(snap);}
   async function openView(){if(view)return;clearView();$('reviewDialog').showModal();viewState('rvWaiting');
     const ws=new WebSocket(wsURL('sub'));const kp=await R.keyPair();const me={ws,kp,key:null,lastAt:0};view=me;
