@@ -11,8 +11,8 @@ assert(/<dialog id="previewDialog">[^]*id="savePreview"[^>]*>동의완료<\/butt
 assert(/#preview,\.header-actions #save,#savePreview,#backPreview,#closePreview,#previewEntry\{font-size:18px;min-height:58px/.test(css));
 // fresh render from current values each time; busy guard; validation before both
 assert(/document\.getElementById\('preview'\)\.onclick=async\(\)=>\{if\(docBusy\|\|!validate\(\)\)return;setDocBusy\(true\);[^]*area\.replaceChildren\(\);for\(let p=1;p<=2;p\+\+\)\{const canvas=await renderPage\(p\)/.test(js));
-assert(/document\.getElementById\('save'\)\.onclick=async\(\)=>\{[^\n]*if\(docBusy\|\|!validate\(\)\)return;setDocBusy\(true\);[^\n]*fetch\('assets\/consent\/original\.pdf'[^\n]*renderOverlay\(page\)[^\n]*makePDF\(originalBytes,overlays\);saveBlob\(/.test(js),'download builds a fresh PDF from original + current overlay');
-assert(/finally\{setDocBusy\(false\);\}\};[^]*finally\{setDocBusy\(false\);\}\};/.test(js));
+assert(/document\.getElementById\('save'\)\.onclick=\(\)=>\{if\(docBusy\|\|dlg\.open\|\|!validate\(\)\)return;dlg\.showModal\(\)/.test(js),'동의완료 validates then opens the format chooser');assert(/async function savePDF\(\)\{[^\n]*if\(docBusy\)return;setDocBusy\(true\);[^\n]*fetch\('assets\/consent\/original\.pdf'[^\n]*renderOverlay\(page\)[^\n]*makePDF\(originalBytes,overlays\);saveBlob\(/.test(js),'download builds a fresh PDF from original + current overlay');
+assert((js.match(/finally\{setDocBusy\(false\);\}\}?;?/g)||[]).length>=3,'PDF, JPG and preview always release the busy lock');
 assert(/function validate\(\)\{const name=[^}]*alert\(t\('nameRequired'\)\)/.test(js),'missing required name is explained, no blank PDF');
 assert(js.includes("addEventListener('close',clearPreview)")&&/function clearPreview\(\)\{[^\n]*c\.width=c\.height=1;[^\n]*replaceChildren\(\)/.test(js),'closing drops rendered pages');
 assert(read('reservations.js').includes("const pd=document.getElementById('previewDialog');if(pd&&pd.open)pd.close();"),'new customer closes view');
