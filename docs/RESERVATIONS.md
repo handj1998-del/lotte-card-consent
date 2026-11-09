@@ -32,7 +32,7 @@
 - Transport: WebSocket to a Durable Object (SQLite class, Workers Free) via `/api/review`, which requires the session cookie and
   the same Origin. Each PC viewer and the tablet do ECDH P-256 (non-extractable private keys) → AES-GCM-256 per viewer; the relay
   only forwards public keys and ciphertext in memory. Nothing is written to D1, DO storage, KV, R2, or browser storage; no logs.
-- Limits: tablet share 30 min, viewer 2 h, max 3 viewers, message ≤ 900 KB; session re-checked every 30 s (sign-out/password
+- Limits: tablet share 10 min per customer (starts automatically when a customer form opens on a tablet signed in to the shared account; resume continues the same 10 min; stops on 동의완료, new customer, sign-out; server closes it at expiry via a DO alarm), viewer 2 h, max 3 viewers, message ≤ 900 KB; session re-checked every 30 s (sign-out/password
   change drops it). A newer tablet share replaces the older one. Sharing stops on 중지, new customer/reservation selection,
   sign-out; the viewer clears its display on end/disconnect/close.
 - Trust note: encryption protects against the relay/network, but the PC trusts the app code served by this Worker (no

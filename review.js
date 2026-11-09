@@ -1,7 +1,8 @@
 'use strict';
 // Live PC review of the CURRENT tablet form (read-only on the PC). Works only on the Worker origin with a signed-in session.
 // Data path: tablet -> (AES-GCM-256, key from ECDH P-256 per viewer) -> in-memory relay -> PC. Nothing is stored anywhere:
-// no server storage, no browser storage, no logging. Sharing stops on 중지, new customer, sign-out or after 30 min.
+// no server storage, no browser storage, no logging. Sharing starts by itself when a customer form opens on a tablet signed in
+// to the shared account, and stops on 중지, 동의완료 (file saved), new customer, sign-out or 10 minutes after that customer started.
 const ConsentReview=(()=>{
   const enc=new TextEncoder(),dec=new TextDecoder();
   const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
@@ -16,28 +17,33 @@ const ConsentReview=(()=>{
 if(typeof module!=='undefined')module.exports={ConsentReview};
 
 if(typeof document!=='undefined')(function(){
-  const $=id=>document.getElementById(id),R=ConsentReview,SHARE_MS=30*60e3;
-  const wsURL=role=>(location.protocol==='https:'?'wss://':'ws://')+location.host+'/api/review?role='+role;
+  const $=id=>document.getElementById(id),R=ConsentReview,SHARE_MS=10*60e3;
+  const wsURL=(role,ttl)=>(location.protocol==='https:'?'wss://':'ws://')+location.host+'/api/review?role='+role+(ttl?'&ttl='+Math.max(5e3,Math.round(ttl)):'');
   // ---------- tablet: publisher ----------
-  let pub=null;// {ws,viewers:Map(id->key),last:string,timer,until}
+  let pub=null,custStart=0,startSeq=0;// pub {ws,viewers:Map(id->key),last,timer,until}; custStart = when the current customer's 10 min began
   function snapshot(){const card=fields.find(f=>f.label==='카드번호').el.value,exp=fields.find(f=>f.label==='유효기간 MM/YYYY').el.value,name=fields.find(f=>f.label==='임차인 이름').el.value.trim();
     return{v:1,n:fields.length,fields:fields.map(f=>[f.label,f.el.value]),choices:choices.map(c=>!!c.el.checked),sigs:signatures.map(s=>s.image?s.image.src:null),
       check:{name:!!name,card:card?(luhnCheck(card)?'valid':'invalid'):'empty',expiry:exp?(checkExpiry(exp)?'valid':'invalid'):'empty',renterSign:!!signatures[0].image}};}
   function shareUI(){const b=$('reviewShareBtn'),st=$('reviewShareStatus');if(!b)return;b.setAttribute('data-i18n',pub?'rvStop':'rvStart');b.textContent=t(pub?'rvStop':'rvStart');b.classList.toggle('active',!!pub);
-    if(pub){st.setAttribute('data-i18n-vars','');st.textContent=t('rvSharing',{n:pub.viewers.size});}}
+    if(pub){const txt=t('rvSharing',{n:pub.viewers.size,m:Math.max(1,Math.ceil((pub.until-Date.now())/60e3))});if(st.textContent!==txt)st.textContent=txt;}}
   function shareMsg(k){const st=$('reviewShareStatus');if(st)st.textContent=k?t(k):'';}
   async function push(force){if(!pub||pub.ws.readyState!==1)return;if(Date.now()>pub.until){stopShare('rvExpired');return;}const snap=snapshot();const s=JSON.stringify(snap);if(!force&&s===pub.last)return;pub.last=s;
     for(const [id,key] of pub.viewers){const m=await R.seal(key,{...snap,at:Date.now()});if(pub)pub.ws.send(JSON.stringify({t:'data',to:id,...m}));}}
-  async function startShare(){if(pub)return;shareMsg('');let ok=false;try{ok=(await fetch('api/session',{credentials:'same-origin',cache:'no-store'})).status===200;}catch{}
-    if(!ok){shareMsg('rvNeedLogin');return;}
-    const ws=new WebSocket(wsURL('pub'));const me={ws,viewers:new Map(),last:'',until:Date.now()+SHARE_MS,timer:null};pub=me;shareUI();
+  async function startShare(o={}){if(pub)return;const seq=++startSeq,until=o.until||Date.now()+SHARE_MS;if(!o.quiet)shareMsg('');let ok=false;try{ok=(await fetch('api/session',{credentials:'same-origin',cache:'no-store'})).status===200;}catch{}
+    if(seq!==startSeq||pub)return;if(!ok){if(!o.quiet)shareMsg('rvNeedLogin');return;}if(Date.now()>=until){shareMsg('rvExpired');return;}
+    const ws=new WebSocket(wsURL('pub',until-Date.now()));const me={ws,viewers:new Map(),last:'',until,timer:null};pub=me;shareUI();
     ws.onmessage=async e=>{if(pub!==me)return;let m;try{m=JSON.parse(e.data);}catch{return;}
       if(m.t==='hello'&&typeof m.from==='string'){try{const kp=await R.keyPair();const key=await R.shared(kp.priv,m.pub);ws.send(JSON.stringify({t:'key',to:m.from,pub:kp.pub}));me.viewers.set(m.from,key);const sm=await R.seal(key,{...snapshot(),at:Date.now()});ws.send(JSON.stringify({t:'data',to:m.from,...sm}));shareUI();}catch{}}
       else if(m.t==='subgone'){me.viewers.delete(m.id);shareUI();}};
     ws.onclose=e=>{if(pub===me){pub=null;clearInterval(me.timer);me.viewers.clear();shareUI();shareMsg(e.code===4002?'rvExpired':e.code===4001?'rvReplaced':'rvStopped');}};
-    me.timer=setInterval(()=>push(false),400);}
-  function stopShare(msgKey){const me=pub;if(!me)return;pub=null;clearInterval(me.timer);try{if(me.ws.readyState===1)me.ws.send(JSON.stringify({t:'end'}));me.ws.close(1000,'stop');}catch{}me.viewers.clear();me.last='';shareUI();shareMsg(msgKey||'rvStopped');}
+    me.timer=setInterval(()=>{if(pub===me){shareUI();push(false);}},400);}
+  function stopShare(msgKey){startSeq++;if(msgKey==='rvDone')custStart=0;const me=pub;if(!me)return;pub=null;clearInterval(me.timer);try{if(me.ws.readyState===1)me.ws.send(JSON.stringify({t:'end'}));me.ws.close(1000,'stop');}catch{}me.viewers.clear();me.last='';shareUI();shareMsg(msgKey||'rvStopped');}
   window.consentReviewStop=stopShare;
+  // Auto start: 'new' = a new customer form opened (fresh 10 min, old share already stopped); 'resume' = back to the same customer's
+  // form: keep the running share, or reconnect only for the time left of that customer's 10 min (never extended). Silent when not
+  // signed in to the shared server (local PIN mode / GitHub Pages): no share. After expiry the manual button starts a new 10 min.
+  window.consentReviewAuto=mode=>{if(mode==='new'){stopShare();custStart=Date.now();startShare({quiet:true,until:custStart+SHARE_MS});}
+    else if(!pub&&custStart&&Date.now()<custStart+SHARE_MS)startShare({quiet:true,until:custStart+SHARE_MS});};
   // ---------- PC: read-only viewer ----------
   let view=null;// {ws,kp,key,lastAt}
   function clearView(){$('rvFields').replaceChildren();$('rvSigs').replaceChildren();$('rvChecks').replaceChildren();$('rvPages').querySelectorAll('canvas').forEach(c=>{c.width=c.height=1;});$('rvPages').replaceChildren();}
@@ -70,7 +76,7 @@ if(typeof document!=='undefined')(function(){
     ws.onclose=()=>{if(view===me){clearView();viewState('rvDisconnected');}};}
   function closeView(){const me=view;view=null;renderSeq++;if(me)try{me.ws.close(1000,'close');}catch{}clearView();if($('reviewDialog').open)$('reviewDialog').close();}
   window.consentReviewClose=closeView;
-  if($('reviewShareBtn'))$('reviewShareBtn').addEventListener('click',()=>pub?stopShare():startShare());
+  if($('reviewShareBtn'))$('reviewShareBtn').addEventListener('click',()=>{if(pub)stopShare();else{custStart=Date.now();startShare({until:custStart+SHARE_MS});}});
   if($('srvReviewBtn'))$('srvReviewBtn').addEventListener('click',openView);
   $('rvClose').addEventListener('click',closeView);$('reviewDialog').addEventListener('close',()=>{if(view)closeView();});
   document.addEventListener('languagechange-consent',()=>{shareUI();});
