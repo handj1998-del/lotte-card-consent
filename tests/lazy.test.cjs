@@ -52,8 +52,8 @@ const det=d.querySelector('.source-pages').closest('details');det.open=true;det.
 // save: pdf-lib failure -> error status, inputs kept, buttons re-enabled; double tap = one request; retry saves the 2-page PDF
 w.eval("validate=()=>true;window.__saved=[];saveBlob=(b,n)=>window.__saved.push({n,type:b.type,size:b.size});");
 const nameEl=w.eval("fields.find(x=>x.label==='임차인 이름').el");nameEl.value='TEST CUSTOMER';
-const save=d.getElementById('save'),pdfBtn=()=>{save.click();d.getElementById('savePdf').click();};pdfBtn();pdfBtn();await tick();assert.equal(libScripts().length,1,'double tap: one pdf-lib request');libScripts()[0].onerror();await tick(50);
-assert.equal(w.eval('docBusy'),false);assert.equal(save.disabled,false);assert.equal(nameEl.value,'TEST CUSTOMER');assert.equal(w.eval('__saved.length'),0);
+const save=d.getElementById('save'),pdfBtn=()=>d.getElementById('preview').click();pdfBtn();pdfBtn();await tick();assert.equal(libScripts().length,1,'double tap: one pdf-lib request');libScripts()[0].onerror();await tick(50);
+assert.equal(w.eval('docBusy'),false);assert.equal(save.disabled,false);assert.equal(d.getElementById('preview').disabled,false);assert.equal(nameEl.value,'TEST CUSTOMER');assert.equal(w.eval('__saved.length'),0);
 assert(d.getElementById('status').textContent.includes(w.eval("t('pdfError')")),'failure message shown');
 pdfBtn();await tick();w.eval(read('vendor/pdf-lib.min.js'));libScripts().at(-1).onload();for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick(30);
 const sv=w.eval('__saved[0]');assert(sv&&/^consent-\d{4}-\d{2}-\d{2}\.pdf$/.test(sv.n)&&sv.type==='application/pdf','retry saves PDF');

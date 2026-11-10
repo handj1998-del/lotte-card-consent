@@ -16,23 +16,19 @@ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialog
 {const s=d.createElement('script');s.textContent=['i18n.js','consent.js','reservations.js','server-reservations.js','guide.js','review.js'].map(read).join('\n;\n');d.body.append(s);}
 return{w,d};};
 let {w,d}=app();w.Element.prototype.scrollIntoView=function(){};const tick=(ms=20)=>new Promise(r=>setTimeout(r,ms));await tick();
-const $=id=>d.getElementById(id),dlg=$('formatDialog'),status=()=>$('status').textContent;
+const $=id=>d.getElementById(id),status=()=>$('status').textContent;
 const libScripts=()=>[...d.querySelectorAll('script[src]')].filter(s=>/pdf-lib/.test(s.src));
-assert.deepEqual([...dlg.querySelectorAll('button')].map(b=>b.id),['savePdf','saveJpg','formatCancel']);
-assert(!$('reviewDialog').querySelector('#savePdf,#saveJpg'),'PC review stays read-only');
+assert(!$('formatDialog')&&!$('savePdf')&&!$('saveJpg'),'no PDF/JPG chooser');
+assert(!$('reviewDialog').querySelector('button:not(#rvClose)'),'PC review stays read-only');
 w.eval("window.__saved=[];saveBlob=(b,n)=>window.__saved.push({n,type:b.type,size:b.size});");
 const nameEl=w.eval("fields.find(x=>x.label==='임차인 이름').el");
 // validation runs first: empty name -> no chooser
-$('save').click();assert.equal(dlg.open,false,'invalid form: no chooser');
+$('save').click();await tick();assert.equal(w.eval('__saved.length'),0,'invalid form: nothing saved');assert.equal(w.eval('docBusy'),false);
 nameEl.value='TEST CUSTOMER';
-// cancel does nothing
-$('save').click();assert.equal(dlg.open,true,'chooser opens after validation');const st0=status();$('formatCancel').click();await tick();
-assert.equal(dlg.open,false);assert.equal(w.eval('__saved.length'),0);assert.equal(libScripts().length,0);assert.equal(status(),st0);assert.equal(w.eval('docBusy'),false);assert.equal(nameEl.value,'TEST CUSTOMER');
-// preview -> 동의완료 also goes through the chooser
 // 문서 보기: no popup, no chooser; PDF saved directly with busy label; PC sharing NOT stopped; inputs kept
 {let stops=0;const os=w.consentReviewStop;w.consentReviewStop=(...x)=>{stops++;return os&&os(...x);};
  // failure first: pdf-lib unavailable -> existing error, label restored, buttons re-enabled
- $('preview').click();await tick();assert.equal(dlg.open,false,'no chooser');assert.equal($('previewDialog').open,false,'no popup');
+ $('preview').click();await tick();assert.equal($('previewDialog').open,false,'no popup');
  assert.equal($('preview').textContent,w.eval("t('savingPdf')"),'busy label');assert.equal($('preview').disabled,true);assert.equal($('save').disabled,true,'double-tap lock');
  libScripts().at(-1).onerror();await tick(50);assert(status().includes(w.eval("t('pdfError')")));assert.equal($('preview').textContent,w.eval("t('preview')"));assert.equal($('preview').disabled,false);
  // success: form-level 문서 보기 button too
@@ -43,18 +39,18 @@ assert.equal(dlg.open,false);assert.equal(w.eval('__saved.length'),0);assert.equ
 // JPG: adaptive loop (size model ~ width*quality), first fit wins, image/jpeg <= 300000, no pdf-lib
 const libBefore=libScripts().length;const tries=[];let sizeFn=(wd,q)=>Math.round(wd*2*q*280);
 w.HTMLCanvasElement.prototype.toBlob=function(cb,type,q){tries.push(this.width+'@'+q);cb(type==='image/jpeg'?new Blob([new Uint8Array(sizeFn(this.width,q))],{type}):new Blob([new Uint8Array(10)],{type:'image/png'}));};
-$('save').click();$('saveJpg').click();$('saveJpg').click();$('save').click();for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick();await tick();
-assert.equal(w.eval('__saved.length'),1,'one file (double tap locked)');const sv=w.eval('__saved[0]');
+{let st=0;const os=w.consentReviewStop;w.consentReviewStop=k=>{if(k==='rvDone')st++;};$('save').click();assert.equal($('save').textContent,w.eval("t('savingJpg')"),'busy label');assert.equal($('save').disabled,true);$('save').click();$('preview').click();for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick();await tick();assert.equal(st,1,'동의완료 stops sharing');w.consentReviewStop=os;assert.equal($('save').textContent,w.eval("t('save')"),'label restored');}for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick();await tick();
+assert.equal(w.eval('__saved.length'),1,'one file (double tap locked)');assert(!w.document.querySelector('dialog[open]'),'no chooser/confirm dialog');const sv=w.eval('__saved[0]');
 assert(/^consent-\d{4}-\d{2}-\d{2}\.jpg$/.test(sv.n));assert.equal(sv.type,'image/jpeg');assert(sv.size<=300000);assert.deepEqual(tries,['1100@0.6','1100@0.5','1100@0.42']);
 assert.equal(libScripts().length,libBefore,'JPG never requests pdf-lib');assert(status().includes(w.eval("t('downloadReadyJpg')")));assert.equal(w.eval('docBusy'),false);
 // smaller widths when needed
-tries.length=0;sizeFn=(wd,q)=>wd<=760&&q<=0.5?299000:400000;w.eval('__saved.length=0');$('save').click();$('saveJpg').click();for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick();
+tries.length=0;sizeFn=(wd,q)=>wd<=760&&q<=0.5?299000:400000;w.eval('__saved.length=0');$('save').click();for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick();
 assert.equal(tries.at(-1),'760@0.5');assert(tries.length>8);assert(w.eval('__saved[0].size')<=300000);
 // cannot fit -> error, no download, inputs kept
-tries.length=0;sizeFn=()=>300001;w.eval('__saved.length=0');$('save').click();$('saveJpg').click();for(let i=0;i<100&&w.eval('docBusy')!==false||i<2;i++)await tick();await tick(50);
+tries.length=0;sizeFn=()=>300001;w.eval('__saved.length=0');$('save').click();for(let i=0;i<100&&w.eval('docBusy')!==false||i<2;i++)await tick();await tick(50);
 assert.equal(w.eval('__saved.length'),0);assert(status().includes(w.eval("t('jpgTooLarge')")));assert.equal(tries.length,9*4,'every width/quality step tried');assert.equal(nameEl.value,'TEST CUSTOMER');assert.equal($('save').disabled,false);
 // encoder failure -> generic error
-w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(null);};$('save').click();$('saveJpg').click();await tick(100);assert(status().includes(w.eval("t('pdfError')")));assert.equal(w.eval('__saved.length'),0);
+w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(null);};$('save').click();await tick(100);assert(status().includes(w.eval("t('pdfError')")));assert.equal(w.eval('__saved.length'),0);
 // real encoder size check with the actual makeJPG code (optional: @napi-rs/canvas)
 let napi;try{napi=require('@napi-rs/canvas');}catch{try{napi=require('/tmp/jpgm/node_modules/@napi-rs/canvas');}catch{}}
 if(napi){const src=js.slice(js.indexOf('const JPG_MAX'),js.indexOf('async function savePDF'));const pages=[await napi.loadImage(path.join(root,'assets/consent/page-1.png')),await napi.loadImage(path.join(root,'assets/consent/page-2.png'))];
@@ -63,5 +59,5 @@ if(napi){const src=js.slice(js.indexOf('const JPG_MAX'),js.indexOf('async functi
  let last;const b=await makeJPG((c,q)=>{const buf=c.encodeSync('jpeg',Math.round(q*100));last={w:c.width,h:c.height,q};return{size:buf.length,type:'image/jpeg'};});
  assert(b.size<=300000);console.log(`real encoder (@napi-rs/canvas): ${last.w}x${last.h} q${last.q} -> ${b.size} bytes`);}
 else console.log('NOTE: @napi-rs/canvas not installed; real-encoder size check skipped');
-console.log('PASS: chooser after validation, cancel no-op, view 동의완료 -> chooser, JPG one image/jpeg <=300000 adaptive width/quality, too-large/encoder errors keep inputs, double-tap lock, no pdf-lib for JPG, PC review read-only');process.exit(0);
+console.log('PASS: 동의완료 = direct JPG after validation (no chooser), 문서 보기 = direct PDF (keeps sharing), JPG one image/jpeg <=300000 adaptive width/quality, too-large/encoder errors keep inputs, double-tap lock, no pdf-lib for JPG, PC review read-only');process.exit(0);
 })().catch(e=>{console.error(e);process.exit(1);});
