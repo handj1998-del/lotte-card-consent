@@ -29,7 +29,17 @@ nameEl.value='TEST CUSTOMER';
 $('save').click();assert.equal(dlg.open,true,'chooser opens after validation');const st0=status();$('formatCancel').click();await tick();
 assert.equal(dlg.open,false);assert.equal(w.eval('__saved.length'),0);assert.equal(libScripts().length,0);assert.equal(status(),st0);assert.equal(w.eval('docBusy'),false);assert.equal(nameEl.value,'TEST CUSTOMER');
 // preview -> 동의완료 also goes through the chooser
-$('preview').click();for(let i=0;i<50&&!$('previewDialog').open;i++)await tick();$('savePreview').click();assert.equal(dlg.open,true,'view 동의완료 opens chooser');$('formatCancel').click();
+// 문서 보기: no popup, no chooser; PDF saved directly with busy label; PC sharing NOT stopped; inputs kept
+{let stops=0;const os=w.consentReviewStop;w.consentReviewStop=(...x)=>{stops++;return os&&os(...x);};
+ // failure first: pdf-lib unavailable -> existing error, label restored, buttons re-enabled
+ $('preview').click();await tick();assert.equal(dlg.open,false,'no chooser');assert.equal($('previewDialog').open,false,'no popup');
+ assert.equal($('preview').textContent,w.eval("t('savingPdf')"),'busy label');assert.equal($('preview').disabled,true);assert.equal($('save').disabled,true,'double-tap lock');
+ libScripts().at(-1).onerror();await tick(50);assert(status().includes(w.eval("t('pdfError')")));assert.equal($('preview').textContent,w.eval("t('preview')"));assert.equal($('preview').disabled,false);
+ // success: form-level 문서 보기 button too
+ $('previewEntry').click();await tick();w.eval(read('vendor/pdf-lib.min.js'));libScripts().at(-1).onload();for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick(30);
+ const sv=w.eval('__saved[0]');assert(/^consent-\d{4}-\d{2}-\d{2}\.pdf$/.test(sv.n)&&sv.type==='application/pdf','direct PDF');
+ assert.equal(stops,0,'문서 보기 does not stop PC sharing');assert.equal(nameEl.value,'TEST CUSTOMER','inputs kept');assert.equal($('previewEntry').textContent,w.eval("t('entryPreview')"));assert.equal($('previewDialog').open,false);
+ assert(status().includes(w.eval("t('downloadReady')")));w.consentReviewStop=os;w.eval('__saved.length=0');}
 // JPG: adaptive loop (size model ~ width*quality), first fit wins, image/jpeg <= 300000, no pdf-lib
 const libBefore=libScripts().length;const tries=[];let sizeFn=(wd,q)=>Math.round(wd*2*q*280);
 w.HTMLCanvasElement.prototype.toBlob=function(cb,type,q){tries.push(this.width+'@'+q);cb(type==='image/jpeg'?new Blob([new Uint8Array(sizeFn(this.width,q))],{type}):new Blob([new Uint8Array(10)],{type:'image/png'}));};
