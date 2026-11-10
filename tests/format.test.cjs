@@ -25,17 +25,18 @@ const nameEl=w.eval("fields.find(x=>x.label==='임차인 이름').el");
 // validation runs first: empty name -> no chooser
 $('save').click();await tick();assert.equal(w.eval('__saved.length'),0,'invalid form: nothing saved');assert.equal(w.eval('docBusy'),false);
 nameEl.value='TEST CUSTOMER';
-// 문서 보기: no popup, no chooser; PDF saved directly with busy label; PC sharing NOT stopped; inputs kept
+// 문서 보기: opens the document view (both pages) AND saves the PDF on the same tap; busy label; PC sharing NOT stopped; inputs kept
 {let stops=0;const os=w.consentReviewStop;w.consentReviewStop=(...x)=>{stops++;return os&&os(...x);};
  // failure first: pdf-lib unavailable -> existing error, label restored, buttons re-enabled
- $('preview').click();await tick();assert.equal($('previewDialog').open,false,'no popup');
+ $('preview').click();for(let i=0;i<50&&!$('previewDialog').open;i++)await tick();assert.equal($('previewDialog').open,true,'view opens');assert.equal(d.querySelectorAll('#previewPages canvas').length,2,'both pages');await tick();
+ assert($('previewStatus').textContent.includes(w.eval("t('loading')")),'saving status inside the view');
  assert.equal($('preview').textContent,w.eval("t('savingPdf')"),'busy label');assert.equal($('preview').disabled,true);assert.equal($('save').disabled,true,'double-tap lock');
- libScripts().at(-1).onerror();await tick(50);assert(status().includes(w.eval("t('pdfError')")));assert.equal($('preview').textContent,w.eval("t('preview')"));assert.equal($('preview').disabled,false);
+ libScripts().at(-1).onerror();await tick(50);assert(status().includes(w.eval("t('pdfError')")));assert.equal($('preview').textContent,w.eval("t('preview')"));assert.equal($('preview').disabled,false);assert($('previewStatus').textContent.includes(w.eval("t('pdfError')")),'error shown in the view');$('closePreview').click();
  // success: form-level 문서 보기 button too
- $('previewEntry').click();await tick();w.eval(read('vendor/pdf-lib.min.js'));libScripts().at(-1).onload();for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick(30);
+ $('previewEntry').click();for(let i=0;i<50&&!$('previewDialog').open;i++)await tick();await tick();w.eval(read('vendor/pdf-lib.min.js'));libScripts().at(-1).onload();for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick(30);
  const sv=w.eval('__saved[0]');assert(/^consent-\d{4}-\d{2}-\d{2}\.pdf$/.test(sv.n)&&sv.type==='application/pdf','direct PDF');
- assert.equal(stops,0,'문서 보기 does not stop PC sharing');assert.equal(nameEl.value,'TEST CUSTOMER','inputs kept');assert.equal($('previewEntry').textContent,w.eval("t('entryPreview')"));assert.equal($('previewDialog').open,false);
- assert(status().includes(w.eval("t('downloadReady')")));w.consentReviewStop=os;w.eval('__saved.length=0');}
+ assert.equal(stops,0,'문서 보기 does not stop PC sharing');assert.equal(nameEl.value,'TEST CUSTOMER','inputs kept');assert.equal($('previewEntry').textContent,w.eval("t('entryPreview')"));assert.equal($('previewDialog').open,true,'view stays open');assert.equal(w.eval('__saved.length'),1,'exactly one PDF per tap');
+ assert(status().includes(w.eval("t('downloadReady')")));assert($('previewStatus').textContent.includes(w.eval("t('downloadReady')")),'saved status inside the view');$('closePreview').click();w.consentReviewStop=os;w.eval('__saved.length=0');}
 // JPG: adaptive loop (size model ~ width*quality), first fit wins, image/jpeg <= 300000, no pdf-lib
 const libBefore=libScripts().length;const tries=[];let sizeFn=(wd,q)=>Math.round(wd*2*q*280);
 w.HTMLCanvasElement.prototype.toBlob=function(cb,type,q){tries.push(this.width+'@'+q);cb(type==='image/jpeg'?new Blob([new Uint8Array(sizeFn(this.width,q))],{type}):new Blob([new Uint8Array(10)],{type:'image/png'}));};

@@ -9,8 +9,8 @@ const ctx={document:doc,URL:{createObjectURL:()=>'blob:test/1',revokeObjectURL:u
 vm.createContext(ctx);vm.runInContext('var downloadURL=null;'+fn('saveBlob'),ctx);
 vm.runInContext("saveBlob({type:'application/pdf'},'consent-2026-11-08.pdf')",ctx);
 const a=created[0];assert.equal(a.tag,'a');assert.equal(a.download,'consent-2026-11-08.pdf');assert(a.download.endsWith('.pdf'));assert.equal(a.target,undefined,'no target=_blank');assert.equal(a.clicked,1);assert.equal(a.inDom,false,'anchor removed');
-assert.equal(opened.length,0);assert.equal(navigated,false);assert.equal(revoked.length,0,'not revoked before download starts');assert.equal(timers[0][1],60000);timers[0][0]();assert.deepEqual(revoked,['blob:test/1']);
-assert(!/window\.open|\.target\s*=|_blank/.test(js),'no viewer window in app code');assert(js.includes("saveBlob(blob,`consent-${today()}.pdf`)"));assert(js.includes("saveBlob(blob,`consent-${today()}.jpg`)")&&/JPG_MAX=300000/.test(js),'JPG option capped at 300,000 bytes');
+assert.equal(opened.length,0);assert.equal(navigated,false);assert.equal(revoked.length,0,'not revoked before download starts');assert.equal(timers[0][1],300000,'blob kept 5 min for the fallback link');timers[0][0]();assert.deepEqual(revoked,['blob:test/1']);
+assert(!/window\.open|\.target\s*=|_blank/.test(js),'no viewer window in app code');assert(js.includes("deliver(blob,`consent-${today()}.pdf`,'downloadReady')"));assert(js.includes("deliver(blob,`consent-${today()}.jpg`,'downloadReadyJpg')")&&/JPG_MAX=300000/.test(js),'JPG option capped at 300,000 bytes');
 // real makePDF against the shipped template
 global.PDFLib=require(path.join(root,'vendor/pdf-lib.min.js'));const mk=new vm.Script(fn('makePDF')+';makePDF');const makePDF=mk.runInNewContext({PDFLib:global.PDFLib,Blob,Error});
 const orig=fs.readFileSync(path.join(root,'assets/consent/original.pdf'));assert.equal(crypto.createHash('sha256').update(orig).digest('hex'),'98ff1bad3fabcd6ded07cfc896352967a6dae851db93ae2ade7a06cd13aec8c6');

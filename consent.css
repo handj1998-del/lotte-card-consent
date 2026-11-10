@@ -120,3 +120,8 @@ body:not(.view-reserve) #resScreen{display:none}
 /* 예약 없이 작성: green, distinct from red reservation actions (white on #17713a ≈ 6:1 contrast) */
 .res-actions button.res-nobooking,.res-nobooking{background:#17713a!important;border:1px solid #17713a!important;color:#fff!important;font-weight:700;min-height:58px;font-size:18px}.res-nobooking:hover,.res-nobooking:active{background:#11592d!important;border-color:#11592d!important}.res-nobooking:focus-visible{outline:3px solid #0b3d1f;outline-offset:2px}
 .rv-loading{padding:16px;border:1px dashed #bbb;border-radius:8px;color:#555;font-weight:600}
+/* Save result is always visible, even when the header is scrolled away */
+#status:not(:empty){position:fixed;left:50%;transform:translateX(-50%);bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:50;max-width:min(92vw,640px);background:#fff;border:2px solid var(--accent);border-radius:10px;padding:12px 16px;box-shadow:0 4px 18px #0003;font-size:16px;line-height:1.5}
+#status .doc-open{display:inline-block;margin-top:6px;font-weight:700;color:var(--accent);text-decoration:underline;min-height:44px;line-height:44px}
+#status .doc-code{font-weight:400;color:#555}
+.preview-status:empty{display:none}.preview-status{font-weight:600;color:var(--accent-dark);margin:8px 0}.preview-status .doc-open{font-weight:700;color:var(--accent);text-decoration:underline}

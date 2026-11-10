@@ -57,8 +57,8 @@ assert.equal(w.eval('docBusy'),false);assert.equal(save.disabled,false);assert.e
 assert(d.getElementById('status').textContent.includes(w.eval("t('pdfError')")),'failure message shown');
 pdfBtn();await tick();w.eval(read('vendor/pdf-lib.min.js'));libScripts().at(-1).onload();for(let i=0;i<100&&!w.eval('__saved.length');i++)await tick(30);
 const sv=w.eval('__saved[0]');assert(sv&&/^consent-\d{4}-\d{2}-\d{2}\.pdf$/.test(sv.n)&&sv.type==='application/pdf','retry saves PDF');
-// 문서 보기: direct PDF download (pdf-lib already loaded -> no new request), no popup
+// 문서 보기: view + PDF on the same tap (pdf-lib already loaded -> no new request)
 const n0=libScripts().length,k0=w.eval('__saved.length');d.getElementById('preview').click();for(let i=0;i<100&&w.eval('__saved.length')===k0;i++)await tick(30);
-assert.equal(d.getElementById('previewDialog').open,false,'no popup');assert(/\.pdf$/.test(w.eval('__saved.at(-1).n')));assert.equal(libScripts().length,n0);
+assert.equal(d.getElementById('previewDialog').open,true,'view opens');assert.equal(d.querySelectorAll('#previewPages canvas').length,2);assert.equal(w.eval('__saved.length'),k0+1,'one PDF');assert(/\.pdf$/.test(w.eval('__saved.at(-1).n')));assert.equal(libScripts().length,n0);
 console.log('PASS: first open loads no pdf-lib/page PNGs, fonts swap with versioned URLs, shared+retryable loaders, save failure/retry/double-tap, preview, cache headers');
 })().catch(e=>{console.error(e);process.exit(1);});
