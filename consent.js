@@ -97,8 +97,7 @@ document.getElementById('backPreview').onclick=()=>document.getElementById('prev
 document.getElementById('closePreview').onclick=()=>document.getElementById('previewDialog').close();
 document.getElementById('previewDialog').addEventListener('close',clearPreview);
 document.getElementById('savePreview').onclick=()=>{document.getElementById('previewDialog').close();document.getElementById('save').click();document.getElementById('status').scrollIntoView({block:'center',behavior:'smooth'});};
-// 문서 보기 (header + form): download the current document as the same 2-page PDF directly, no popup or chooser. Same validation as
-// before; it is not completion, so PC review sharing keeps running. The old in-page view dialog is no longer opened.
+// Warm up pdf-lib as soon as the customer starts typing, so 문서 보기's PDF is ready sooner.
 {const entry=document.getElementById('entry');if(entry)entry.addEventListener('focusin',()=>{loadPdfLib().catch(()=>{});},{once:true});}
 // 문서 보기 (header + form): open the in-page document view of the current values/signatures AND save the same 2-page PDF on the
 // same tap (no extra button/confirm). Not completion: PC review sharing keeps running. 동의완료 (in the view too) = JPG.
